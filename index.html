@@ -1,3 +1,8 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>MNM Premier League</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -23,6 +28,7 @@
     --floodlight: rgba(255, 255, 255, 0.65);
     --pitch-line: rgba(28, 122, 74, 0.12);
     --shadow: 0 1px 2px rgba(15, 30, 20, 0.06), 0 6px 16px -8px rgba(15, 30, 20, 0.18);
+    --on-accent: #ffffff;
   }
 
   @media (prefers-color-scheme: dark) {
@@ -46,6 +52,7 @@
       --floodlight: rgba(255, 255, 255, 0.09);
       --pitch-line: rgba(79, 207, 140, 0.16);
       --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 10px 24px -12px rgba(0, 0, 0, 0.55);
+      --on-accent: #0b1f16;
     }
   }
 
@@ -69,6 +76,7 @@
     --floodlight: rgba(255, 255, 255, 0.09);
     --pitch-line: rgba(79, 207, 140, 0.16);
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 10px 24px -12px rgba(0, 0, 0, 0.55);
+    --on-accent: #0b1f16;
   }
 
   * { box-sizing: border-box; }
@@ -202,50 +210,44 @@
     white-space: nowrap;
   }
 
-  /* ---------- end-season trigger ---------- */
+  /* ---------- primary action row (match entry / end season) ---------- */
+
+  .action-row {
+    display: flex;
+    gap: 8px;
+  }
+
+  .action-row button {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-height: 46px;
+    font-family: "Inter", sans-serif;
+    font-size: 0.84rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    text-transform: none;
+    border: none;
+    border-radius: 13px;
+    padding: 0 14px;
+    white-space: nowrap;
+  }
 
   .end-btn {
-    margin-left: auto;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-family: "Inter", sans-serif;
-    font-size: 0.68rem;
-    font-weight: 600;
-    letter-spacing: 0.01em;
-    text-transform: none;
-    color: var(--gold);
-    background: var(--gold-soft);
-    border: none;
-    border-radius: 999px;
-    padding: 4px 10px 4px 8px;
-    white-space: nowrap;
+    color: var(--on-accent);
+    background: var(--gold);
+    box-shadow: 0 6px 14px -8px rgba(169, 122, 23, 0.6);
   }
-  .end-btn svg { width: 12px; height: 12px; }
-
-  /* ---------- match entry trigger ---------- */
+  .end-btn svg { width: 17px; height: 17px; }
 
   .match-btn {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-family: "Inter", sans-serif;
-    font-size: 0.68rem;
-    font-weight: 600;
-    letter-spacing: 0.01em;
-    text-transform: none;
-    color: var(--pitch-deep);
-    background: var(--pitch-soft);
-    border: none;
-    border-radius: 999px;
-    padding: 4px 10px 4px 8px;
-    white-space: nowrap;
+    color: var(--on-accent);
+    background: var(--pitch);
+    box-shadow: 0 6px 14px -8px rgba(28, 122, 74, 0.55);
   }
-  .match-btn svg { width: 12px; height: 12px; }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) .match-btn { color: var(--pitch); }
-  }
-  :root[data-theme="dark"] .match-btn { color: var(--pitch); }
+  .match-btn svg { width: 17px; height: 17px; }
 
   /* ---------- tab bar ---------- */
 
@@ -1020,6 +1022,8 @@
     .chevron, .detail, .history-chevron, .history-detail { transition: none; }
   }
 </style>
+</head>
+<body>
 
 <div class="app" id="app"></div>
 
@@ -1027,28 +1031,34 @@
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
 </button>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (function () {
   "use strict";
 
-  var EXAMPLE_TEAMS = [
-    { id: "ex1", name: "별빛 유나이티드", w: 7, d: 2, l: 1, gf: 24, ga: 11 },
-    { id: "ex2", name: "상록 FC", w: 6, d: 3, l: 1, gf: 19, ga: 10 },
-    { id: "ex3", name: "청계 로버스", w: 5, d: 2, l: 3, gf: 17, ga: 14 },
-    { id: "ex4", name: "무지개 타운", w: 3, d: 4, l: 3, gf: 15, ga: 16 },
-    { id: "ex5", name: "한빛 애슬레틱", w: 2, d: 2, l: 6, gf: 10, ga: 21 },
-    { id: "ex6", name: "동산 유나이티드", w: 1, d: 3, l: 6, gf: 9, ga: 22 }
-  ];
+  /* ---------- Supabase 연결 ---------- */
+  // GitHub Pages 등 어디서 열든 동일한 프로젝트로 연결됩니다.
+  // 팀/모바일 어디서든 SUPABASE_KEY만 채워 넣으면 바로 동작해요.
+  var SUPABASE_URL = "https://albugxbnkahyfdtfxozf.supabase.co";
+  var SUPABASE_KEY = "sb_publishable_uvxldxcPoi8jR-LGa47TZA_lGphjrFl";
+  var ROW_ID = "main"; // app_state 테이블의 고정 행 id — 리그 전체 상태가 이 한 행에 저장됩니다.
+
+  var supabaseClient = (window.supabase && SUPABASE_KEY && SUPABASE_KEY.indexOf("여기에") !== 0)
+    ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+    : null;
+
+  // Fresh install starts with a single blank, unnamed team card instead of
+  // canned example data — just one empty row ready to be filled in.
+  var STARTER_TEAM = { id: uid(), name: "", w: 0, d: 0, l: 0, gf: 0, ga: 0, color: null };
 
   var state = {
     leagueName: "MNM Premier League",
-    teams: EXAMPLE_TEAMS.slice(),
+    teams: [STARTER_TEAM],
     matches: []
   };
   var exampleMode = true;
   var openId = null;
   var confirmDeleteId = null;
-  var docExists = false;
   var championModalOpen = false;
   var activeTab = "current";
   var historyList = [];
@@ -1175,14 +1185,16 @@
       '</svg></div>';
     var seasonNo = historyLoaded ? historyList.length + 1 : null;
     html += '<div class="eyebrow"><span>' + total + '개 팀 · 자동 정렬' + (seasonNo ? ' · 시즌 ' + seasonNo : '') + '</span>' +
-      (exampleMode ? '<span class="example-badge">예시 데이터 — 눌러서 수정해보세요</span>' : '') +
-      (total >= 2
-        ? '<button class="match-btn" data-role="open-match" type="button">' + ICON_MATCH + '경기 입력</button>'
-        : '') +
-      (total > 0
-        ? '<button class="end-btn" data-role="open-champion" type="button">' + trophySvg("") + '시즌 종료</button>'
-        : '') +
+      (exampleMode ? '<span class="example-badge">아래 팀을 눌러 이름을 입력해보세요</span>' : '') +
       '</div>';
+    if (total > 0) {
+      html += '<div class="action-row">' +
+        (total >= 2
+          ? '<button class="match-btn" data-role="open-match" type="button">' + ICON_MATCH + '경기 입력</button>'
+          : '') +
+        '<button class="end-btn" data-role="open-champion" type="button">' + trophySvg("") + '시즌 종료</button>' +
+        '</div>';
+    }
     html += '</div>';
 
     html += '<div class="tabbar">' +
@@ -1229,7 +1241,7 @@
 
         html += '<div class="detail"><div class="detail-inner"><div class="detail-body">';
         html += '<div class="name-field"><span class="field-label">팀 이름</span>' +
-          '<input class="name-input" data-role="name" data-id="' + t.id + '" value="' + escapeHtml(t.name) + '" maxlength="24" /></div>';
+          '<input class="name-input" data-role="name" data-id="' + t.id + '" value="' + escapeHtml(t.name) + '" placeholder="팀 이름 입력" maxlength="24" /></div>';
 
         html += '<div class="color-field"><span class="field-label">팀 색상</span><div class="color-swatches">';
         COLOR_SWATCH_HUES.forEach(function (hue) {
@@ -1475,20 +1487,6 @@
     entry.standings.forEach(function (row, i) { row.rank = i + 1; });
     entry.champion = entry.standings[0];
     entry.teamCount = entry.standings.length;
-  }
-
-  function persistHistoryEntry(entry) {
-    if (!seasonsRef) return;
-    var body = {
-      leagueName: entry.leagueName,
-      endedAt: entry.endedAt,
-      teamCount: entry.teamCount,
-      champion: entry.champion,
-      standings: entry.standings
-    };
-    seasonsRef.doc(entry.id).set(body).catch(function () {
-      /* edit save failed transiently; local state still reflects the edit */
-    });
   }
 
   function wireEvents() {
@@ -1748,7 +1746,7 @@
         if (v !== entry.standings[teamIdx].name) {
           entry.standings[teamIdx].name = v;
           recomputeHistoryRecord(entry);
-          persistHistoryEntry(entry);
+          persist();
           render();
         }
       });
@@ -1767,7 +1765,7 @@
         if (n > 999) n = 999;
         entry.standings[teamIdx][field] = n;
         recomputeHistoryRecord(entry);
-        persistHistoryEntry(entry);
+        persist();
         render();
       });
     });
@@ -1795,11 +1793,7 @@
         historyList = historyList.filter(function (h) { return h.id !== id; });
         confirmDeleteHistoryId = null;
         if (openHistoryId === id) openHistoryId = null;
-        if (seasonsRef) {
-          seasonsRef.doc(id).delete().catch(function () {
-            /* delete failed transiently; local list already reflects removal */
-          });
-        }
+        persist();
         render();
       });
     });
@@ -1838,23 +1832,12 @@
       standings: standings
     };
 
-    // Show the archived season in "시즌 기록" immediately, on this device,
-    // without waiting on a round trip to the store or relying on the live
-    // subscription to notice our own write. A client-generated id means the
-    // write below lands under the SAME id, so when the live list does catch
-    // up (via get()/onSnapshot below) it replaces this entry rather than
-    // duplicating it.
+    // 시즌 기록에 바로 반영 — historyList도 toDocBody()에 포함되므로 아래 persist()
+    // 한 번으로 팀 리셋과 시즌 기록 추가가 함께 저장됨.
     var recordId = uid();
     var localRecord = Object.assign({ id: recordId }, record);
     historyList = [localRecord].concat(historyList.filter(function (r) { return r.id !== recordId; }));
     historyLoaded = true;
-
-    if (seasonsRef) {
-      seasonsRef.doc(recordId).set(record).catch(function () {
-        /* archive write failed transiently; the optimistic entry above still
-           keeps it visible on this device, and local state still resets */
-      });
-    }
 
     state.teams = state.teams.map(function (t) {
       return { id: t.id, name: t.name, w: 0, d: 0, l: 0, gf: 0, ga: 0, color: (t.color != null ? t.color : null) };
@@ -1964,19 +1947,27 @@
 
   addBtn.addEventListener("click", addTeam);
 
-  /* ---------- persistence ---------- */
+  /* ---------- persistence (Supabase) ---------- */
 
-  var dbRef = null;
-  var seasonsRef = null;
   var writing = false;
   var pendingWrite = false;
+  var realtimeChannel = null;
 
+  // Everything the app needs — teams, 경기 기록, 시즌 기록 — is stored as one
+  // JSON blob in a single row (id = ROW_ID) of the app_state table, so every
+  // edit is a single upsert instead of juggling several tables.
   function toDocBody() {
-    return { leagueName: state.leagueName, teams: state.teams, matches: state.matches, exampleMode: exampleMode };
+    return {
+      leagueName: state.leagueName,
+      teams: state.teams,
+      matches: state.matches,
+      exampleMode: exampleMode,
+      seasons: historyList
+    };
   }
 
   function persist() {
-    if (!dbRef) return;
+    if (!supabaseClient) return;
     scheduleWrite();
   }
 
@@ -1984,11 +1975,13 @@
     if (writing) { pendingWrite = true; return; }
     writing = true;
     var body = toDocBody();
-    dbRef.set(body).then(function () {
-      docExists = true;
+    Promise.resolve(
+      supabaseClient.from("app_state").upsert({ id: ROW_ID, data: body, updated_at: new Date().toISOString() })
+    ).then(function (res) {
+      if (res && res.error) throw res.error;
     }).catch(function () {
       /* last-writer-wins elsewhere, or transiently unavailable; next edit retries */
-    }).finally(function () {
+    }).then(function () {
       writing = false;
       if (pendingWrite) {
         pendingWrite = false;
@@ -2027,6 +2020,19 @@
       });
     }
     if (typeof data.exampleMode === "boolean") exampleMode = data.exampleMode;
+    if (Array.isArray(data.seasons)) {
+      historyList = data.seasons.map(function (s) {
+        return {
+          id: String(s.id || uid()),
+          leagueName: String(s.leagueName || state.leagueName || ""),
+          endedAt: String(s.endedAt || ""),
+          teamCount: Number(s.teamCount) || (Array.isArray(s.standings) ? s.standings.length : 0),
+          champion: s.champion || null,
+          standings: Array.isArray(s.standings) ? s.standings : []
+        };
+      });
+      historyList.sort(function (a, b) { return (b.endedAt || "").localeCompare(a.endedAt || ""); });
+    }
   }
 
   render();
@@ -2039,73 +2045,59 @@
   }, 8000);
 
   (async function init() {
-    try {
-      var db = await window.claude.use("db");
-      if (!db) {
-        // no realtime store available here; page stays local-only
-        historyLoaded = true;
-        render();
-        return;
-      }
-      dbRef = db.doc("league/table");
-      dbRef.onSnapshot(function (snap) {
-        if (snap.exists) {
-          docExists = true;
-          applyRemote(snap.data());
-          // Own writes echo back through this same snapshot listener, so
-          // only drop these once the team they point to is actually gone
-          // (deleted here or by another viewer) — never unconditionally,
-          // or the detail panel snaps shut right after every edit.
-          if (openId && !state.teams.some(function (t) { return t.id === openId; })) {
-            openId = null;
-          }
-          if (confirmDeleteId && !state.teams.some(function (t) { return t.id === confirmDeleteId; })) {
-            confirmDeleteId = null;
-          }
-        } else {
-          docExists = false;
-        }
-        render();
-      }, function () {
-        /* subscription error: keep showing last known state */
-        render();
-      });
-
-      seasonsRef = db.collection("seasons");
-
-      function applySeasonsSnapshot(qsnap) {
-        var list = qsnap.docs.map(function (d) {
-          var data = d.data() || {};
-          data.id = d.id;
-          return data;
-        });
-        list.sort(function (a, b) {
-          return (b.endedAt || "").localeCompare(a.endedAt || "");
-        });
-        historyList = list.slice(0, 50);
-        historyLoaded = true;
-        render();
-      }
-
-      // Belt-and-suspenders load: a one-time get() alongside the live
-      // onSnapshot below, so history still appears reliably even on a
-      // connection where the live subscription's first delivery is slow
-      // or never arrives.
-      seasonsRef.get().then(applySeasonsSnapshot).catch(function () {
-        historyLoaded = true;
-        render();
-      });
-
-      seasonsRef.onSnapshot(applySeasonsSnapshot, function () {
-        historyLoaded = true;
-        render();
-        /* subscription error: keep showing last known history */
-      });
-    } catch (e) {
-      /* claude.use unavailable: local-only fallback */
+    if (!supabaseClient) {
+      // SUPABASE_KEY가 비어있거나 CDN을 못 불러온 경우: 로컬 전용으로 동작
       historyLoaded = true;
       render();
+      return;
+    }
+
+    try {
+      var res = await supabaseClient.from("app_state").select("data").eq("id", ROW_ID).maybeSingle();
+      if (res.error) throw res.error;
+      if (res.data && res.data.data) {
+        applyRemote(res.data.data);
+      } else {
+        // 이 프로젝트에서 처음 실행되는 경우: 지금 상태(빈 팀 1개)로 행을 만들어둠
+        await Promise.resolve(
+          supabaseClient.from("app_state").upsert({ id: ROW_ID, data: toDocBody(), updated_at: new Date().toISOString() })
+        ).catch(function () {});
+      }
+    } catch (e) {
+      /* 최초 로드 실패: 로컬 기본 상태를 유지하고, 다음 편집 때 다시 저장을 시도함 */
+    }
+    historyLoaded = true;
+    render();
+
+    // 실시간 동기화: 다른 기기/브라우저에서 저장한 내용이 이 화면에도 바로 반영됨
+    try {
+      realtimeChannel = supabaseClient
+        .channel("app_state_sync")
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "app_state", filter: "id=eq." + ROW_ID },
+          function (payload) {
+            var row = payload && payload.new;
+            if (!row || !row.data) return;
+            applyRemote(row.data);
+            // 내 write도 이 채널로 그대로 되돌아오므로, 그 팀이 실제로 사라졌을
+            // 때만(다른 기기에서 삭제됐을 때만) 열려있던 패널을 닫음 — 매번
+            // 무조건 닫으면 편집 직후 패널이 바로 닫혀버림.
+            if (openId && !state.teams.some(function (t) { return t.id === openId; })) {
+              openId = null;
+            }
+            if (confirmDeleteId && !state.teams.some(function (t) { return t.id === confirmDeleteId; })) {
+              confirmDeleteId = null;
+            }
+            render();
+          }
+        )
+        .subscribe();
+    } catch (e) {
+      /* 실시간 채널 연결 실패: 이 탭은 계속 동작하되, 다른 기기의 변경사항만 실시간으로 못 받음 */
     }
   })();
 })();
 </script>
+</body>
+</html>
