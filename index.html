@@ -1811,6 +1811,7 @@
 
   // PUBG 시즌 기록(역대 기록) 탭
   var openPubgHistoryId = null;
+  var confirmDeletePubgHistoryId = null;
 
   var appEl = document.getElementById("app");
   var addBtn = document.getElementById("addBtn");
@@ -3400,6 +3401,20 @@
     renderPubg();
   }
 
+  // 이미 종료(기록으로 저장)된 PUBG 시즌을 "시즌 기록"에서 삭제한다. 축구의
+  // 시즌 기록 삭제와 달리 PUBG의 "역대 기록"(우승 횟수·최다 게임·최고 점수)은
+  // 별도의 통산 기록 배열이 아니라 항상 state.pubg.seasons 자체를 그때그때
+  // 다시 훑어 계산하므로, 이 배열에서 지우기만 하면 역대 기록에서도 자동으로
+  // 함께 빠진다 — 축구처럼 allMatches 같은 별도 정리가 필요 없다. 진행 중인
+  // 시즌(state.pubg.currentSeason)에는 전혀 영향 없다.
+  function deletePubgHistoryEntry(id) {
+    state.pubg.seasons = state.pubg.seasons.filter(function (s) { return s.id !== id; });
+    confirmDeletePubgHistoryId = null;
+    if (openPubgHistoryId === id) openPubgHistoryId = null;
+    persist();
+    renderPubg();
+  }
+
   // 역대 기록 — 우승 횟수는 "몇 번째로 만든 팀인지"가 아니라 팀 "이름"으로
   // 집계한다(축구의 championCounts()와 동일한 방식). 같은 이름을 계속 쓰면
   // 계속 쌓이고, 이름이 다르면 다른 팀으로 취급된다.
@@ -3908,6 +3923,13 @@
         });
         html += '</div>';
       }
+      if (confirmDeletePubgHistoryId === s.id) {
+        html += '<div class="confirm-row">이 시즌 기록을 삭제할까요? ' +
+          '<button class="confirm-yes" data-role="pubg-confirm-delete-history" data-id="' + s.id + '" type="button">삭제</button>' +
+          '<button class="confirm-no" data-role="pubg-cancel-delete-history" type="button">취소</button></div>';
+      } else {
+        html += '<div class="row-actions"><button class="delete-btn" data-role="pubg-delete-history" data-id="' + s.id + '" type="button">시즌 기록 삭제</button></div>';
+      }
       html += '</div></div></div>';
       html += '</div>';
     });
@@ -4057,6 +4079,26 @@
         var id = el.getAttribute("data-id");
         openPubgHistoryId = (openPubgHistoryId === id) ? null : id;
         renderPubg();
+      });
+    });
+    pubgAppEl.querySelectorAll('[data-role="pubg-delete-history"]').forEach(function (el) {
+      el.addEventListener("click", function (e) {
+        e.stopPropagation();
+        confirmDeletePubgHistoryId = el.getAttribute("data-id");
+        renderPubg();
+      });
+    });
+    pubgAppEl.querySelectorAll('[data-role="pubg-cancel-delete-history"]').forEach(function (el) {
+      el.addEventListener("click", function (e) {
+        e.stopPropagation();
+        confirmDeletePubgHistoryId = null;
+        renderPubg();
+      });
+    });
+    pubgAppEl.querySelectorAll('[data-role="pubg-confirm-delete-history"]').forEach(function (el) {
+      el.addEventListener("click", function (e) {
+        e.stopPropagation();
+        deletePubgHistoryEntry(el.getAttribute("data-id"));
       });
     });
   }
