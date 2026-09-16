@@ -594,54 +594,6 @@
     text-align: center;
   }
 
-  .match-predict {
-    display: flex;
-    flex-direction: column;
-    gap: 7px;
-    background: var(--surface-2);
-    border-radius: 12px;
-    padding: 10px 12px;
-  }
-
-  .predict-label {
-    font-family: "JetBrains Mono", ui-monospace, monospace;
-    font-size: 0.62rem;
-    letter-spacing: 0.07em;
-    text-transform: uppercase;
-    color: var(--ink-muted);
-  }
-
-  .predict-note {
-    font-family: "Inter", sans-serif;
-    font-size: 0.78rem;
-    color: var(--ink-muted);
-  }
-
-  .predict-bar {
-    position: relative;
-    height: 8px;
-    border-radius: 999px;
-    background: var(--gold-soft);
-    overflow: hidden;
-  }
-
-  .predict-fill {
-    position: absolute;
-    inset: 0 auto 0 0;
-    background: var(--pitch);
-    border-radius: 999px;
-  }
-
-  .predict-pcts {
-    display: flex;
-    justify-content: space-between;
-    gap: 8px;
-    font-family: "JetBrains Mono", ui-monospace, monospace;
-    font-size: 0.72rem;
-    font-weight: 700;
-    color: var(--ink);
-  }
-
   @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
   @keyframes pop-in { from { opacity: 0; transform: scale(0.92) translateY(6px); } to { opacity: 1; transform: scale(1) translateY(0); } }
 
@@ -724,13 +676,6 @@
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
   }
 
-  .team-cell {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    min-width: 0;
-  }
-
   .team-name {
     font-family: "Oswald", "Arial Narrow", sans-serif;
     font-weight: 500;
@@ -740,19 +685,6 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    min-width: 0;
-  }
-
-  .streak-badge {
-    flex-shrink: 0;
-    font-family: "Inter", sans-serif;
-    font-size: 0.64rem;
-    font-weight: 700;
-    color: var(--gold);
-    background: var(--gold-soft);
-    border-radius: 999px;
-    padding: 2px 7px;
-    white-space: nowrap;
   }
 
   .played {
@@ -1108,7 +1040,7 @@
   // GitHub Pages 등 어디서 열든 동일한 프로젝트로 연결됩니다.
   // 팀/모바일 어디서든 SUPABASE_KEY만 채워 넣으면 바로 동작해요.
   var SUPABASE_URL = "https://albugxbnkahyfdtfxozf.supabase.co";
-  var SUPABASE_KEY = "여기에_PUBLISHABLE_KEY";
+  var SUPABASE_KEY = "sb_publishable_uvxldxcPoi8jR-LGa47TZA_lGphjrFl";
   var ROW_ID = "main"; // app_state 테이블의 고정 행 id — 리그 전체 상태가 이 한 행에 저장됩니다.
 
   var supabaseClient = (window.supabase && SUPABASE_KEY && SUPABASE_KEY.indexOf("여기에") !== 0)
@@ -1122,10 +1054,7 @@
   var state = {
     leagueName: "MNM Premier League",
     teams: [STARTER_TEAM],
-    matches: [],
-    // 시즌이 바뀌어도 절대 비워지지 않는 전체 경기 기록 — 연승 표시와 AI 예측이
-    // 여기서 데이터를 가져오기 때문에 시즌 종료 후에도 계속 이어짐.
-    allMatches: []
+    matches: []
   };
   var exampleMode = true;
   var openId = null;
@@ -1156,58 +1085,6 @@
     var pts = team.w * 3 + team.d;
     var gd = team.gf - team.ga;
     return { p: p, pts: pts, gd: gd };
-  }
-
-  // 시즌이 바뀌어도 끊기지 않는 전체 기록(state.allMatches)에서 그 팀의
-  // 통산 승/무/패·득실을 집계한다 — 연승 표시와 AI 예측이 여기 기반함.
-  function allTimeStats(teamId) {
-    var w = 0, d = 0, l = 0, gf = 0, ga = 0;
-    (state.allMatches || []).forEach(function (m) {
-      var isA = m.teamAId === teamId;
-      var isB = m.teamBId === teamId;
-      if (!isA && !isB) return;
-      var mine = isA ? m.scoreA : m.scoreB;
-      var theirs = isA ? m.scoreB : m.scoreA;
-      gf += mine;
-      ga += theirs;
-      if (mine > theirs) w++;
-      else if (mine < theirs) l++;
-      else d++;
-    });
-    var p = w + d + l;
-    return { p: p, pts: w * 3 + d, gd: gf - ga };
-  }
-
-  // 전체 기록을 최신 순으로 훑어, 그 팀이 연속으로 이긴 경기 수를 센다 — 시즌이
-  // 바뀌어도 계속 이어지고, 무/패를 만나면 즉시 멈춘다(진행 중인 연승만 표시).
-  function winStreak(teamId) {
-    var all = state.allMatches || [];
-    var streak = 0;
-    for (var i = all.length - 1; i >= 0; i--) {
-      var m = all[i];
-      if (m.teamAId !== teamId && m.teamBId !== teamId) continue;
-      var isA = m.teamAId === teamId;
-      var mine = isA ? m.scoreA : m.scoreB;
-      var theirs = isA ? m.scoreB : m.scoreA;
-      if (mine > theirs) { streak++; } else { break; }
-    }
-    return streak;
-  }
-
-  // 재미 요소용 간단한 승부 예측 — 실제 AI 호출이 아니라, 통산 경기당 평균 승점과
-  // 골득실 흐름을 섞은 가벼운 공식으로 확률을 흉내낸다. 통산 기록 기반이라
-  // 시즌이 바뀌어 팀 성적이 0으로 리셋돼도 예측은 계속 이전 기록을 반영한다.
-  function predictMatch(teamA, teamB) {
-    var ca = allTimeStats(teamA.id);
-    var cb = allTimeStats(teamB.id);
-    if (ca.p === 0 && cb.p === 0) {
-      return { note: "아직 경기 기록이 없어서 반반으로 예측할게요.", pctA: 50, pctB: 50 };
-    }
-    var ratingA = (ca.p ? ca.pts / ca.p : 1.2) * 3 + ca.gd * 0.15;
-    var ratingB = (cb.p ? cb.pts / cb.p : 1.2) * 3 + cb.gd * 0.15;
-    var pctA = Math.round(50 + (ratingA - ratingB) * 6);
-    pctA = Math.max(8, Math.min(92, pctA));
-    return { note: null, pctA: pctA, pctB: 100 - pctA };
   }
 
   function sortedTeams() {
@@ -1356,10 +1233,7 @@
         html += '<div class="stripe ' + zone + '"></div>';
         html += '<div class="rank ' + (zone === "leader" ? "leader" : "") + '">' + rank + '</div>';
         html += '<div class="crest" style="' + crestStyle(t) + '">' + escapeHtml(initials(t.name)) + '</div>';
-        var streak = winStreak(t.id);
-        html += '<div class="team-cell"><div class="team-name">' + escapeHtml(t.name || "이름 없음") + '</div>' +
-          (streak >= 2 ? '<span class="streak-badge">🔥' + streak + '연승</span>' : '') +
-          '</div>';
+        html += '<div class="team-name">' + escapeHtml(t.name || "이름 없음") + '</div>';
         html += '<div class="played">' + c.p + '</div>';
         html += '<div class="pts-pill">' + c.pts + '</div>';
         html += '<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
@@ -1520,24 +1394,6 @@
     });
     html += '</select>';
     html += '</div>';
-
-    if (matchTeamA && matchTeamB && matchTeamA !== matchTeamB) {
-      var predTeamA = state.teams.find(function (t) { return t.id === matchTeamA; });
-      var predTeamB = state.teams.find(function (t) { return t.id === matchTeamB; });
-      if (predTeamA && predTeamB) {
-        var pred = predictMatch(predTeamA, predTeamB);
-        html += '<div class="match-predict">';
-        html += '<span class="predict-label">🤖 AI 예측</span>';
-        if (pred.note) {
-          html += '<span class="predict-note">' + escapeHtml(pred.note) + '</span>';
-        } else {
-          html += '<div class="predict-bar"><span class="predict-fill" style="width:' + pred.pctA + '%"></span></div>';
-          html += '<div class="predict-pcts"><span>' + escapeHtml(predTeamA.name) + ' ' + pred.pctA + '%</span>' +
-            '<span>' + pred.pctB + '% ' + escapeHtml(predTeamB.name) + '</span></div>';
-        }
-        html += '</div>';
-      }
-    }
 
     if (matchError) {
       html += '<div class="match-error">' + escapeHtml(matchError) + '</div>';
@@ -1782,14 +1638,12 @@
     if (matchTeamASelect) {
       matchTeamASelect.addEventListener("change", function () {
         matchTeamA = matchTeamASelect.value;
-        render(); // AI 예측이 선택 즉시 갱신되도록
       });
     }
     var matchTeamBSelect = document.getElementById("matchTeamBSelect");
     if (matchTeamBSelect) {
       matchTeamBSelect.addEventListener("change", function () {
         matchTeamB = matchTeamBSelect.value;
-        render(); // AI 예측이 선택 즉시 갱신되도록
       });
     }
     var matchScoreAInput = document.getElementById("matchScoreAInput");
@@ -2036,8 +1890,7 @@
       scoreB: scoreB,
       playedAt: new Date().toISOString()
     };
-    state.matches = (state.matches || []).concat([record]);
-    state.allMatches = (state.allMatches || []).concat([record]);
+    state.matches = [record].concat(state.matches || []);
     exitExampleMode();
     persist();
   }
@@ -2073,8 +1926,6 @@
     }
 
     state.matches = matches.filter(function (x) { return x.id !== id; });
-    // 잘못 입력해 되돌리는 경기이므로, 통산 기록(연승/AI 예측용)에서도 함께 제외
-    state.allMatches = (state.allMatches || []).filter(function (x) { return x.id !== id; });
     confirmDeleteMatchId = null;
     persist();
     render();
@@ -2110,20 +1961,8 @@
       leagueName: state.leagueName,
       teams: state.teams,
       matches: state.matches,
-      allMatches: state.allMatches,
       exampleMode: exampleMode,
       seasons: historyList
-    };
-  }
-
-  function normalizeMatch(m) {
-    return {
-      id: String(m.id || uid()),
-      teamAId: String(m.teamAId || ""),
-      teamBId: String(m.teamBId || ""),
-      scoreA: Number(m.scoreA) || 0,
-      scoreB: Number(m.scoreB) || 0,
-      playedAt: String(m.playedAt || "")
     };
   }
 
@@ -2169,14 +2008,16 @@
       });
     }
     if (Array.isArray(data.matches)) {
-      state.matches = data.matches.map(normalizeMatch);
-    }
-    if (Array.isArray(data.allMatches)) {
-      state.allMatches = data.allMatches.map(normalizeMatch);
-    } else if (Array.isArray(data.matches)) {
-      // 이전 버전 데이터(통산 기록 필드가 없던 시절)에서 넘어온 경우: 최소한
-      // 지금 보이는 이번 시즌 경기라도 통산 기록의 시작점으로 삼는다.
-      state.allMatches = state.matches.slice();
+      state.matches = data.matches.map(function (m) {
+        return {
+          id: String(m.id || uid()),
+          teamAId: String(m.teamAId || ""),
+          teamBId: String(m.teamBId || ""),
+          scoreA: Number(m.scoreA) || 0,
+          scoreB: Number(m.scoreB) || 0,
+          playedAt: String(m.playedAt || "")
+        };
+      });
     }
     if (typeof data.exampleMode === "boolean") exampleMode = data.exampleMode;
     if (Array.isArray(data.seasons)) {
