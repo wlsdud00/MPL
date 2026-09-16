@@ -2168,6 +2168,11 @@
         e.stopPropagation();
         var id = el.getAttribute("data-id");
         historyList = historyList.filter(function (h) { return h.id !== id; });
+        // 이 시즌에 속했던 경기도 통산 기록(allMatches)에서 함께 지운다 — 그래야
+        // "역대 기록"의 연승/연패·최다 득점/실점 기록도 삭제한 시즌 몫만큼 같이
+        // 빠진다. seasonId가 없는(이 기능이 생기기 전에 저장된) 옛 경기는 건드리지
+        // 않는다.
+        state.allMatches = (state.allMatches || []).filter(function (m) { return m.seasonId !== id; });
         confirmDeleteHistoryId = null;
         if (openHistoryId === id) openHistoryId = null;
         persist();
@@ -2215,6 +2220,12 @@
     var localRecord = Object.assign({ id: recordId }, record);
     historyList = [localRecord].concat(historyList.filter(function (r) { return r.id !== recordId; }));
     historyLoaded = true;
+
+    // 이번 시즌에 뛴 경기들에 방금 만든 시즌 기록의 id를 붙여둔다 — state.matches와
+    // state.allMatches는 같은 경기 객체를 공유하므로 이 한 번의 표시로 나중에
+    // "시즌 기록 삭제" 시 통산 기록(연승/연패·최다 득점/실점)에서도 이 시즌 몫만
+    // 정확히 골라 지울 수 있다.
+    (state.matches || []).forEach(function (m) { m.seasonId = recordId; });
 
     state.teams = state.teams.map(function (t) {
       return { id: t.id, name: t.name, w: 0, d: 0, l: 0, gf: 0, ga: 0, color: (t.color != null ? t.color : null) };
@@ -2265,7 +2276,10 @@
       teamBId: teamB.id,
       scoreA: scoreA,
       scoreB: scoreB,
-      playedAt: new Date().toISOString()
+      playedAt: new Date().toISOString(),
+      // 이 경기가 어느 시즌 기록에 속하는지 — 시즌이 끝날 때 endSeason()이
+      // 채워준다. 아직 진행 중인 시즌의 경기는 null.
+      seasonId: null
     };
     state.matches = (state.matches || []).concat([record]);
     state.allMatches = (state.allMatches || []).concat([record]);
@@ -2354,7 +2368,8 @@
       teamBId: String(m.teamBId || ""),
       scoreA: Number(m.scoreA) || 0,
       scoreB: Number(m.scoreB) || 0,
-      playedAt: String(m.playedAt || "")
+      playedAt: String(m.playedAt || ""),
+      seasonId: (m.seasonId == null) ? null : String(m.seasonId)
     };
   }
 
