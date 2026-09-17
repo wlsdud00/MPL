@@ -1713,6 +1713,53 @@
   .pubg-history-game-row .gnum { color: var(--ink); font-weight: 700; flex: 0 0 100%; }
 
   /* ==========================================================
+     🎲 순서 정하기
+     ========================================================== */
+
+  .random-result-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .random-result-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--surface-2);
+    border-radius: 12px;
+    padding: 10px 14px;
+  }
+
+  .random-result-rank {
+    width: 26px;
+    height: 26px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-weight: 700;
+    font-size: 0.82rem;
+    color: var(--ink-muted);
+  }
+
+  .random-result-name {
+    font-family: "Oswald", "Arial Narrow", sans-serif;
+    font-weight: 600;
+    font-size: 0.98rem;
+    color: var(--ink);
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* ==========================================================
      로그인 / 회원가입
      ========================================================== */
 
@@ -1839,9 +1886,11 @@
   <div class="mode-switch" id="modeSwitch">
     <button class="mode-btn active" id="modeBtnSoccer" type="button">⚽ MNM LEAGUE</button>
     <button class="mode-btn" id="modeBtnPubg" type="button">🎯 MNM 킬내기</button>
+    <button class="mode-btn" id="modeBtnRandom" type="button">🎲 순서 정하기</button>
   </div>
   <div class="app" id="app"></div>
   <div class="app" id="pubgApp" style="display:none;"></div>
+  <div class="app" id="randomApp" style="display:none;"></div>
 </div>
 
 <button class="fab" id="addBtn" aria-label="팀 추가" type="button">
@@ -1913,7 +1962,12 @@
     // 여기서 데이터를 가져오기 때문에 시즌 종료 후에도 계속 이어짐.
     allMatches: [],
     // PUBG 킬내기 모드 데이터 — 축구 데이터와 완전히 독립적으로 관리된다.
-    pubg: { currentSeason: null, seasons: [] }
+    pubg: { currentSeason: null, seasons: [] },
+    // 🎲 순서 정하기 모드 데이터 — football/pubg와 독립된 별도 객체. participants는
+    // 참가자 목록(이름은 중복 허용, id로 구분), result는 그 참가자들의 id를
+    // "정해진 순서대로" 나열한 배열이다(이름 문자열이 아니라 id로 저장하는
+    // 이유는 이름이 중복될 수 있기 때문).
+    randomOrder: { participants: [], result: [] }
   };
   var exampleMode = true;
   var openId = null;
@@ -1970,9 +2024,15 @@
   var openPubgHistoryId = null;
   var confirmDeletePubgHistoryId = null;
 
+  /* ---------- 🎲 순서 정하기 UI 상태 ---------- */
+  // randomError는 화면에만 잠깐 보여주는 안내 문구라서 state(=저장되는 데이터)가
+  // 아니라 다른 *Error 변수들과 같은 자리에 둔다(저장 대상 아님).
+  var randomError = "";
+
   var appEl = document.getElementById("app");
   var addBtn = document.getElementById("addBtn");
   var pubgAppEl = document.getElementById("pubgApp");
+  var randomAppEl = document.getElementById("randomApp");
 
   /* ---------- 로그인 / 회원가입 상태 ---------- */
   var authScreenEl = document.getElementById("authScreen");
@@ -3125,6 +3185,10 @@
       pubg: {
         currentSeason: state.pubg.currentSeason,
         seasons: state.pubg.seasons
+      },
+      randomOrder: {
+        participants: state.randomOrder.participants,
+        result: state.randomOrder.result
       }
     };
   }
@@ -3224,6 +3288,38 @@
     // 에도 오류 없이 기본값으로 채워진다 — applyRemotePubg 내부에서 처리. pubg는
     // football 객체를 전혀 참조하지 않고 자기 자신의 teams(참가자 구성)만 쓴다.
     applyRemotePubg(data.pubg);
+
+    // 🎲 순서 정하기: football/pubg와 마찬가지로 완전히 독립된 자기 객체만
+    // 읽는다. randomOrder 필드 자체가 없던 예전 데이터(이 기능이 생기기 전에
+    // 저장된 계정)를 불러와도 오류 없이 기본값(빈 참가자/빈 결과)으로
+    // 채워진다.
+    applyRemoteRandomOrder(data.randomOrder);
+  }
+
+  /* ==========================================================
+     🎲 순서 정하기 — 데이터 로직
+     ========================================================== */
+
+  function applyRemoteRandomOrder(randomOrder) {
+    var participants = [];
+    if (randomOrder && Array.isArray(randomOrder.participants)) {
+      participants = randomOrder.participants.map(function (p) {
+        return { id: String((p && p.id) || uid()), name: String((p && p.name) || "") };
+      });
+    }
+    var participantIds = {};
+    participants.forEach(function (p) { participantIds[p.id] = true; });
+
+    var result = [];
+    if (randomOrder && Array.isArray(randomOrder.result)) {
+      // 방어적 처리: 결과 안에 이제는 존재하지 않는 참가자 id가 섞여 있어도
+      // (예: 다른 기기에서 삭제와 동시에 저장이 겹친 경우) 화면에는 실제
+      // 남아있는 참가자만 보여준다.
+      result = randomOrder.result
+        .map(function (id) { return String(id); })
+        .filter(function (id) { return participantIds[id]; });
+    }
+    state.randomOrder = { participants: participants, result: result };
   }
 
   /* ==========================================================
@@ -4284,34 +4380,214 @@
   }
 
   /* ==========================================================
-     모드 전환 (⚽ MNM LEAGUE ↔ 🎯 PUBG 킬내기)
+     🎲 순서 정하기 — 데이터 로직 + 화면
+     football/pubg와 완전히 독립된 state.randomOrder만 읽고 쓴다.
+     ========================================================== */
+
+  function randomHasResult() {
+    return !!(state.randomOrder.result && state.randomOrder.result.length);
+  }
+
+  function randomAddParticipant() {
+    // 새로 추가된 입력칸에 자동으로 포커스를 주지 않는다 — 이 버튼은(팀 구성
+    // 화면의 "+ 인원 추가"처럼) 목록이 늘어날 때마다 버튼 자체의 위치가 아래로
+    // 밀리는 인라인 버튼이라, 포커스를 옮기면 그 직후의 blur가 곧바로 재렌더를
+    // 일으켜 "+ 인원 추가"를 연달아 누를 때 클릭이 씹히는 경우가 생길 수 있다
+    // (고정 위치인 팀 추가 FAB과 달리 이 버튼은 위치가 계속 바뀌기 때문).
+    state.randomOrder.participants.push({ id: uid(), name: "" });
+    randomError = "";
+    persist();
+    renderRandom();
+  }
+
+  function randomDeleteParticipant(id) {
+    state.randomOrder.participants = state.randomOrder.participants.filter(function (p) { return p.id !== id; });
+    // 참가자가 사라지면 이미 만들어진 결과에서도 그 사람을 함께 제거한다 —
+    // 배열에서 그냥 빼기만 하면 남은 사람들의 순번은 렌더링할 때(인덱스+1)
+    // 자동으로 1번부터 다시 매겨진다.
+    if (state.randomOrder.result && state.randomOrder.result.length) {
+      state.randomOrder.result = state.randomOrder.result.filter(function (pid) { return pid !== id; });
+    }
+    persist();
+    renderRandom();
+  }
+
+  // Fisher-Yates shuffle: 뒤에서부터 아직 안 뽑힌 구간(0..i) 안에서 무작위
+  // 인덱스를 골라 자리를 맞바꾼다 — 모든 순열이 동일한 확률로 나오는 표준 방식.
+  function fisherYatesShuffle(arr) {
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var tmp = a[i];
+      a[i] = a[j];
+      a[j] = tmp;
+    }
+    return a;
+  }
+
+  function randomShuffle() {
+    if (state.randomOrder.participants.length < 2) {
+      randomError = "순서를 정하려면 최소 2명이 필요합니다.";
+      renderRandom();
+      return;
+    }
+    randomError = "";
+    var ids = state.randomOrder.participants.map(function (p) { return p.id; });
+    state.randomOrder.result = fisherYatesShuffle(ids);
+    persist();
+    renderRandom();
+  }
+
+  function randomResetResult() {
+    state.randomOrder.result = [];
+    persist();
+    renderRandom();
+  }
+
+  function randomClearAll() {
+    state.randomOrder.participants = [];
+    state.randomOrder.result = [];
+    randomError = "";
+    persist();
+    renderRandom();
+  }
+
+  function renderRandom() {
+    if (!randomAppEl) return;
+    var participants = state.randomOrder.participants;
+    var result = state.randomOrder.result || [];
+    var byId = {};
+    participants.forEach(function (p) { byId[p.id] = p; });
+
+    var html = '<div class="header">';
+    html += '<div class="pitch-banner"><div class="banner-content">';
+    html += '<span class="banner-eyebrow">RANDOM ORDER</span>';
+    html += '<div class="pubg-title">🎲 순서 정하기</div>';
+    html += '</div></div>';
+    html += '<div class="field-strip"><svg class="field-strip-lines" viewBox="0 0 400 16" preserveAspectRatio="none">' +
+      '<line x1="200" y1="0" x2="200" y2="16" stroke="#fff" stroke-width="2" opacity="0.45"/></svg></div>';
+    html += '</div>';
+
+    html += '<div class="pubg-card">';
+    html += '<div class="pubg-card-title">참가자</div>';
+    if (!participants.length) {
+      html += '<div class="empty">아직 참가자가 없어요.</div>';
+    } else {
+      html += '<div class="pubg-member-list">';
+      participants.forEach(function (p) {
+        html += '<div class="pubg-member-row" data-participant-id="' + p.id + '">';
+        html += '<input class="name-input" data-role="random-participant-name" data-id="' + p.id +
+          '" placeholder="참가자 이름" value="' + escapeHtml(p.name) + '" maxlength="12" />';
+        html += '<button class="delete-btn" data-role="random-delete-participant" data-id="' + p.id + '" type="button">삭제</button>';
+        html += '</div>';
+      });
+      html += '</div>';
+    }
+    html += '<button class="pubg-add-member-btn" data-role="random-add-participant" type="button">+ 인원 추가</button>';
+
+    if (randomError) html += '<div class="match-error">' + escapeHtml(randomError) + '</div>';
+
+    html += '<div class="action-row"><button class="match-btn" data-role="random-shuffle" type="button">' +
+      (randomHasResult() ? "다시 돌리기" : "순서 랜덤으로 정하기") + '</button></div>';
+
+    if (participants.length > 0 || result.length > 0) {
+      html += '<div class="action-row"><button class="delete-btn" data-role="random-clear-all" type="button">전체 비우기</button></div>';
+    }
+    html += '</div>';
+
+    if (result.length > 0) {
+      html += '<div class="pubg-card">';
+      html += '<div class="pubg-card-title">랜덤 결과</div>';
+      html += '<div class="random-result-list">';
+      result.forEach(function (pid, i) {
+        var p = byId[pid];
+        if (!p) return; // 방어적 처리 — 정상 흐름에서는 항상 존재(삭제 시 결과에서도 함께 제거됨)
+        html += '<div class="random-result-row">';
+        html += '<div class="random-result-rank">' + (i + 1) + '</div>';
+        html += '<div class="random-result-name">' + escapeHtml(p.name || "이름 없음") + '</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+      html += '<div class="action-row"><button class="delete-btn" data-role="random-reset-result" type="button">결과 초기화</button></div>';
+      html += '</div>';
+    }
+
+    randomAppEl.innerHTML = html;
+    wireRandomEvents();
+  }
+
+  function wireRandomEvents() {
+    var addParticipantBtn = randomAppEl.querySelector('[data-role="random-add-participant"]');
+    if (addParticipantBtn) addParticipantBtn.addEventListener("click", randomAddParticipant);
+
+    randomAppEl.querySelectorAll('[data-role="random-participant-name"]').forEach(function (el) {
+      el.addEventListener("click", function (e) { e.stopPropagation(); });
+      el.addEventListener("blur", function () {
+        var id = el.getAttribute("data-id");
+        var p = state.randomOrder.participants.find(function (x) { return x.id === id; });
+        if (!p) return;
+        // 앞뒤 공백 제거, 공백만 입력한 경우는 허용하지 않고 기본 표시로 대체.
+        // 이름이 중복되는 건 문제 없다(내부 식별은 이름이 아니라 id로 한다).
+        var v = el.value.trim() || "이름 없음";
+        if (v !== p.name) {
+          p.name = v;
+          persist();
+          renderRandom();
+        }
+      });
+    });
+
+    randomAppEl.querySelectorAll('[data-role="random-delete-participant"]').forEach(function (el) {
+      el.addEventListener("click", function () {
+        randomDeleteParticipant(el.getAttribute("data-id"));
+      });
+    });
+
+    var shuffleBtn = randomAppEl.querySelector('[data-role="random-shuffle"]');
+    if (shuffleBtn) shuffleBtn.addEventListener("click", randomShuffle);
+
+    var resetResultBtn = randomAppEl.querySelector('[data-role="random-reset-result"]');
+    if (resetResultBtn) resetResultBtn.addEventListener("click", randomResetResult);
+
+    var clearAllBtn = randomAppEl.querySelector('[data-role="random-clear-all"]');
+    if (clearAllBtn) clearAllBtn.addEventListener("click", randomClearAll);
+  }
+
+  /* ==========================================================
+     모드 전환 (⚽ MNM LEAGUE ↔ 🎯 PUBG 킬내기 ↔ 🎲 순서 정하기)
      ========================================================== */
 
   var modeBtnSoccer = document.getElementById("modeBtnSoccer");
   var modeBtnPubg = document.getElementById("modeBtnPubg");
+  var modeBtnRandom = document.getElementById("modeBtnRandom");
 
   function switchMode(mode) {
     currentMode = mode;
     if (modeBtnSoccer) modeBtnSoccer.classList.toggle("active", mode === "soccer");
     if (modeBtnPubg) modeBtnPubg.classList.toggle("active", mode === "pubg");
+    if (modeBtnRandom) modeBtnRandom.classList.toggle("active", mode === "random");
     if (appEl) appEl.style.display = mode === "soccer" ? "" : "none";
     if (pubgAppEl) pubgAppEl.style.display = mode === "pubg" ? "" : "none";
+    if (randomAppEl) randomAppEl.style.display = mode === "random" ? "" : "none";
     if (mode === "soccer") {
       render(); // 축구 render()가 activeTab에 맞춰 addBtn 표시 여부를 알아서 정함
     } else {
       if (addBtn) addBtn.style.display = "none"; // FAB(+팀 추가)는 축구 전용
-      renderPubg();
+      if (mode === "pubg") renderPubg();
+      else renderRandom();
     }
   }
   if (modeBtnSoccer) modeBtnSoccer.addEventListener("click", function () { switchMode("soccer"); });
   if (modeBtnPubg) modeBtnPubg.addEventListener("click", function () { switchMode("pubg"); });
+  if (modeBtnRandom) modeBtnRandom.addEventListener("click", function () { switchMode("random"); });
 
-  // 초기 로드·원격 동기화 시점에 축구/PUBG 화면을 함께 최신화하되, 현재 보고
-  // 있는 모드가 PUBG라면 축구 render()가 되살린 FAB을 다시 숨긴다.
+  // 초기 로드·원격 동기화 시점에 축구/PUBG/순서 정하기 화면을 함께 최신화하되,
+  // 현재 보고 있는 모드가 축구가 아니라면 축구 render()가 되살린 FAB을 다시 숨긴다.
   function renderBoth() {
     render();
     renderPubg();
-    if (currentMode === "pubg" && addBtn) addBtn.style.display = "none";
+    renderRandom();
+    if (currentMode !== "soccer" && addBtn) addBtn.style.display = "none";
   }
 
   renderBoth();
@@ -4336,6 +4612,8 @@
     state.matches = [];
     state.allMatches = [];
     state.pubg = { currentSeason: null, seasons: [] };
+    state.randomOrder = { participants: [], result: [] };
+    randomError = "";
     exampleMode = true;
     openId = null;
     confirmDeleteId = null;
@@ -4369,57 +4647,76 @@
     confirmDeletePubgHistoryId = null;
   }
 
-  async function startAppForUser(session) {
-    var userId = session.user.id;
-    if (currentUserId === userId) return; // 이미 이 계정 데이터를 불러온 상태 — 중복 로드 방지
-    currentUserId = userId;
-    resetAppStateToDefault(); // 이전 계정(또는 초기 상태)의 흔적을 먼저 지움
-    renderBoth();
+  // startAppForUser()는 "이 계정의 데이터를 리셋 -> 조회 -> 적용까지 전부 끝냈다"는
+  // 사실을 나타내는 Promise를 돌려준다. handleAuthSession()은 반드시 이 Promise가
+  // 끝날 때까지 기다린 다음에만 화면(mainUI)을 보여줘야, 로그인 직후나 계정 전환
+  // 시 이전 화면 -> 빈 화면 -> 새 데이터 순으로 깜빡이는 현상이 생기지 않는다.
+  // startAppForUserPromise*는 "지금 이 계정에 대한 로드가 이미 진행 중이거나
+  // 막 끝났다"는 상태를 기억해서, getSession()/onAuthStateChange가 같은 세션에
+  // 대해 거의 동시에 handleAuthSession을 두 번 호출하더라도 실제 조회/리셋은
+  // 한 번만 일어나고, 나중 호출은 먼저 시작된 바로 그 로드가 끝나기를 함께
+  // 기다리게 만든다(그렇지 않으면 두 번째 호출이 "이미 currentUserId가 같으니
+  // 끝났다"고 착각해 데이터가 채 안 들어온 상태로 곧장 화면을 보여줄 수 있다).
+  var startAppForUserPromise = null;
+  var startAppForUserPromiseUserId = null;
 
-    // Safety net: whatever else happens, never leave "불러오는 중" stuck forever.
-    setTimeout(function () {
-      if (currentUserId === userId && !historyLoaded) {
+  function startAppForUser(session) {
+    var userId = session.user.id;
+    if (startAppForUserPromiseUserId === userId && startAppForUserPromise) {
+      return startAppForUserPromise; // 이미 이 계정 로드가 진행 중이거나 끝남 — 그 결과를 함께 기다림
+    }
+    startAppForUserPromiseUserId = userId;
+    startAppForUserPromise = (async function () {
+      resetAppStateToDefault(); // 1) 이전 계정(또는 초기 상태)의 흔적을 먼저 지움
+      currentUserId = userId; // 2) 이 계정을 "현재 로딩 중/로딩됨" 계정으로 표시
+      renderBoth(); // mainUI는 아직 숨겨진 상태이므로(로딩 화면 표시 중) 화면엔 보이지 않음
+
+      // Safety net: whatever else happens, never leave "불러오는 중" stuck forever.
+      setTimeout(function () {
+        if (currentUserId === userId && !historyLoaded) {
+          historyLoaded = true;
+          renderBoth();
+        }
+      }, 8000);
+
+      if (!supabaseClient) {
+        // SUPABASE_KEY가 비어있거나 CDN을 못 불러온 경우: 로컬 전용으로 동작
         historyLoaded = true;
         renderBoth();
+        return;
       }
-    }, 8000);
 
-    if (!supabaseClient) {
-      // SUPABASE_KEY가 비어있거나 CDN을 못 불러온 경우: 로컬 전용으로 동작
-      historyLoaded = true;
-      renderBoth();
-      return;
-    }
-
-    try {
-      var res = await supabaseClient.from("app_state").select("data").eq("user_id", userId).maybeSingle();
-      if (currentUserId !== userId) return; // 그 사이 로그아웃했거나 다른 계정으로 바뀜
-      if (res.error) throw res.error;
-      if (res.data && res.data.data) {
-        applyRemote(res.data.data);
-      } else {
-        // 이 계정으로 처음 로그인한 경우: 지금 상태(빈 팀 1개)로 이 계정
-        // 전용 행을 새로 만들어둔다. user_id에 UNIQUE 제약이 있으므로
-        // onConflict: "user_id"를 쓰면 실수로 같은 계정 행이 두 개
-        // 생기는 일도 없다.
-        await Promise.resolve(
-          supabaseClient.from("app_state").upsert(
-            { user_id: userId, data: toDocBody(), updated_at: new Date().toISOString() },
-            { onConflict: "user_id" }
-          )
-        ).catch(function () {});
+      try {
+        var res = await supabaseClient.from("app_state").select("data").eq("user_id", userId).maybeSingle(); // 3) 조회
+        if (currentUserId !== userId) return; // 그 사이 로그아웃했거나 다른 계정으로 바뀜
+        if (res.error) throw res.error;
+        if (res.data && res.data.data) {
+          applyRemote(res.data.data); // 4) 데이터가 있으면 적용
+        } else {
+          // 5) 이 계정으로 처음 로그인한 경우: 지금 상태(빈 팀 1개)로 이 계정
+          // 전용 행을 새로 만들어둔다. user_id에 UNIQUE 제약이 있으므로
+          // onConflict: "user_id"를 쓰면 실수로 같은 계정 행이 두 개
+          // 생기는 일도 없다.
+          await Promise.resolve(
+            supabaseClient.from("app_state").upsert(
+              { user_id: userId, data: toDocBody(), updated_at: new Date().toISOString() },
+              { onConflict: "user_id" }
+            )
+          ).catch(function () {});
+        }
+      } catch (e) {
+        /* 최초 로드 실패: 로컬 기본 상태를 유지하고, 다음 편집 때 다시 저장을 시도함 */
       }
-    } catch (e) {
-      /* 최초 로드 실패: 로컬 기본 상태를 유지하고, 다음 편집 때 다시 저장을 시도함 */
-    }
-    if (currentUserId !== userId) return;
-    historyLoaded = true;
-    renderBoth();
+      if (currentUserId !== userId) return;
+      historyLoaded = true; // 6)
+      renderBoth(); // 7)
 
-    // 실시간 동기화: 같은 계정으로 로그인한 다른 기기/브라우저에서 저장한
-    // 내용이 이 화면에도 바로 반영된다. filter가 user_id 기준이라 다른
-    // 계정의 변경사항은 애초에 이 채널로 들어오지 않는다.
-    subscribeRealtime(userId);
+      // 실시간 동기화: 같은 계정으로 로그인한 다른 기기/브라우저에서 저장한
+      // 내용이 이 화면에도 바로 반영된다. filter가 user_id 기준이라 다른
+      // 계정의 변경사항은 애초에 이 채널로 들어오지 않는다.
+      subscribeRealtime(userId);
+    })();
+    return startAppForUserPromise;
   }
 
   function subscribeRealtime(userId) {
@@ -4637,15 +4934,51 @@
     if (userUsernameLabelEl) userUsernameLabelEl.textContent = authEmailToUsername((session && session.user && session.user.email) || "");
   }
 
-  function handleAuthSession(session) {
+  // 로그인 성공 직후 ~ 그 계정의 app_state 로딩이 끝나기 전까지 보여주는 화면.
+  // mainUI는 계속 숨긴 채로 두고(= MNM LEAGUE/PUBG 화면은 이 시점엔 절대 노출되지
+  // 않음), authScreen 자리에 안내 문구만 띄운다.
+  function showAccountLoadingScreen() {
+    if (mainUIEl) mainUIEl.style.display = "none";
+    if (authScreenEl) {
+      authScreenEl.style.display = "flex";
+      authScreenEl.innerHTML = '<div class="auth-card"><div class="auth-eyebrow">MNM GAMING</div>' +
+        '<div class="auth-title">MNM Gaming 데이터를 불러오는 중...</div></div>';
+    }
+  }
+
+  async function handleAuthSession(session) {
     if (session && session.user) {
-      showMainUI(session);
-      startAppForUser(session); // 계정이 바뀌었을 때만 내부에서 리셋 후 새로 로드
+      var userId = session.user.id;
+      // 진짜 "새 로그인/계정 전환"일 때만 로딩 화면으로 전환한다 — 토큰 자동
+      // 갱신처럼 같은 계정에 대해 onAuthStateChange가 다시 호출되는 경우까지
+      // 매번 mainUI를 숨겼다 보여주면 그때도 화면이 깜빡이므로, currentUserId와
+      // 다른 계정일 때만(=로그인 직후이거나 이전과 다른 계정일 때만) 아래에서
+      // mainUI를 가리고 로딩 문구를 띄운다.
+      if (userId !== currentUserId) {
+        // 절대 순서: 로딩 화면 표시(=mainUI는 계속 숨김) -> 이 계정 데이터를
+        // 완전히 리셋/조회/적용 -> 그 모든 게 끝난 뒤에만 showMainUI(). 이 순서를
+        // 지켜야 "이전 계정 화면이 잠깐 보였다가 새 계정 데이터로 바뀌는" 깜빡임이
+        // 사라진다 — 새 계정 데이터가 준비되기 전에는 화면에 아무 계정의 데이터도
+        // 보이지 않는다.
+        showAccountLoadingScreen();
+      }
+      await startAppForUser(session); // 리셋 -> 조회 -> 적용 -> historyLoaded -> renderBoth까지 전부 끝날 때까지 대기
+      // 기다리는 동안 로그아웃되었거나 또 다른 계정으로 전환됐다면, 지금 막
+      // 로드가 끝난(어쩌면 이미 낡은) 계정 화면을 보여주면 안 된다. 오직 "지금
+      // 진짜로 로그인돼 있는 계정"과 일치할 때만 화면을 연다.
+      if (currentUserId !== userId) return;
+      showMainUI(session); // 데이터 준비가 완전히 끝난 뒤 마지막에만 화면 표시 (이미 보이는 중이면 그대로 유지될 뿐 깜빡이지 않음)
     } else {
+      // 로그아웃(또는 세션 없음): 무엇보다 먼저 mainUI를 가려서, 아래에서 상태를
+      // 리셋/재렌더하는 동안 이전 계정 데이터가 단 한 프레임도 화면에 남지
+      // 않게 한다.
+      if (mainUIEl) mainUIEl.style.display = "none";
       unsubscribeRealtime();
       currentUserId = null;
+      startAppForUserPromise = null;
+      startAppForUserPromiseUserId = null;
       resetAppStateToDefault(); // 로그아웃하면 화면에 남은 계정 데이터를 즉시 지움
-      renderBoth();
+      renderBoth(); // mainUI는 이미 숨겨져 있으므로 안전
       // 일부러 authMode/authError/authInfo는 여기서 건드리지 않는다. 이유:
       // signUp() 직후 우리가 스스로 signOut()을 호출하는 흐름에서, 그 결과로
       // (실제 Supabase에서도) onAuthStateChange가 SIGNED_OUT 이벤트를 조금
@@ -4654,7 +4987,7 @@
       // 입력값만 화면에 남지 않도록 지워준다.
       authPassword = "";
       authPasswordConfirm = "";
-      showAuthScreen();
+      showAuthScreen(); // 로그인 화면 표시 (mainUI 숨김을 다시 한 번 보장)
     }
   }
 
