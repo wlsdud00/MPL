@@ -651,6 +651,37 @@
     width: 100%;
   }
 
+  .match-type-select {
+    display: flex;
+    gap: 4px;
+    background: var(--surface-2);
+    border-radius: 12px;
+    padding: 4px;
+  }
+  .match-type-btn {
+    flex: 1;
+    font-family: "Inter", sans-serif;
+    font-size: 0.84rem;
+    font-weight: 700;
+    color: var(--ink-muted);
+    background: transparent;
+    border: none;
+    border-radius: 9px;
+    padding: 9px 0;
+  }
+  .match-type-btn.active {
+    background: var(--surface);
+    color: var(--ink);
+    box-shadow: var(--shadow);
+  }
+
+  .match-type-hint {
+    margin-top: -8px;
+    font-size: 0.72rem;
+    color: var(--ink-muted);
+    text-align: center;
+  }
+
   .match-pair {
     display: flex;
     align-items: center;
@@ -837,10 +868,28 @@
 
   .team-cell {
     display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .team-name-line {
+    display: flex;
     align-items: center;
     gap: 5px;
     min-width: 0;
   }
+
+  .rating-line {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 0.66rem;
+    color: var(--ink-muted);
+    letter-spacing: 0.02em;
+  }
+  .rating-line .rating-value { font-weight: 700; color: var(--ink); }
 
   .team-name {
     font-family: "Oswald", "Arial Narrow", sans-serif;
@@ -1070,6 +1119,79 @@
   .legend-item { display: flex; align-items: center; gap: 5px; }
   .legend-icon { width: 13px; height: 13px; flex-shrink: 0; }
 
+  /* ---------- 전체 전적 탭 ---------- */
+
+  .overall-caption {
+    display: grid;
+    grid-template-columns: 26px 1fr 30px 26px 26px 26px 40px 56px;
+    gap: 5px;
+    padding: 0 10px;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.05em;
+    color: var(--ink-muted);
+    text-transform: uppercase;
+    text-align: center;
+  }
+  .overall-caption span:first-child { visibility: hidden; }
+  .overall-caption span:nth-child(2) { text-align: left; }
+
+  .overall-table {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 6px;
+  }
+
+  .overall-row {
+    display: grid;
+    grid-template-columns: 26px 1fr 30px 26px 26px 26px 40px 56px;
+    align-items: center;
+    gap: 5px;
+    background: var(--surface);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    padding: 10px 8px;
+  }
+  .overall-row .team-name { font-size: 0.88rem; }
+  .overall-row .played { font-size: 0.74rem; }
+  .overall-row .pts-pill { font-size: 0.76rem; padding: 3px 1px; }
+
+  .overall-rating {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1.2;
+  }
+  .overall-rating .rating-value {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-weight: 700;
+    font-size: 0.8rem;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .overall-rating .rating-delta {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 0.62rem;
+    color: var(--ink-muted);
+  }
+
+  .overall-hint {
+    padding: 10px 10px 0;
+    font-size: 0.72rem;
+    color: var(--ink-muted);
+    text-align: center;
+  }
+
+  /* ---------- 레이팅 표시 공통(팀 행 · 전체 전적 · 경기 기록) ---------- */
+
+  .rating-delta.up { color: var(--pitch-deep); font-weight: 700; }
+  .rating-delta.down { color: var(--relegation); font-weight: 700; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .rating-delta.up { color: var(--pitch); }
+  }
+  :root[data-theme="dark"] .rating-delta.up { color: var(--pitch); }
+
   /* ---------- match log ---------- */
 
   .match-list {
@@ -1090,9 +1212,15 @@
     color: var(--ink-muted);
   }
 
+  .match-row-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
   .match-row {
     display: grid;
-    grid-template-columns: 1fr auto 1fr auto;
+    grid-template-columns: auto 1fr auto 1fr auto;
     align-items: center;
     gap: 8px;
     background: var(--surface);
@@ -1100,6 +1228,33 @@
     box-shadow: var(--shadow);
     padding: 9px 8px 9px 12px;
   }
+
+  .match-rating-line {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    padding: 0 8px 0 14px;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 0.64rem;
+    color: var(--ink-muted);
+  }
+  .match-rating-team { white-space: nowrap; }
+
+  .match-type-badge {
+    flex-shrink: 0;
+    font-family: "Inter", sans-serif;
+    font-size: 0.6rem;
+    font-weight: 700;
+    border-radius: 999px;
+    padding: 3px 7px;
+    white-space: nowrap;
+  }
+  .match-type-badge.league { color: var(--pitch-deep); background: var(--pitch-soft); }
+  .match-type-badge.friendly { color: var(--ink-muted); background: var(--surface-2); }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .match-type-badge.league { color: var(--pitch); }
+  }
+  :root[data-theme="dark"] .match-type-badge.league { color: var(--pitch); }
 
   .match-team {
     font-family: "Oswald", "Arial Narrow", sans-serif;
@@ -1884,7 +2039,7 @@
     <button class="logout-link" id="logoutBtn" type="button">로그아웃</button>
   </div>
   <div class="mode-switch" id="modeSwitch">
-    <button class="mode-btn active" id="modeBtnSoccer" type="button">⚽ MNM LEAGUE</button>
+    <button class="mode-btn active" id="modeBtnSoccer" type="button">⚽ MNM FOOTBALL</button>
     <button class="mode-btn" id="modeBtnPubg" type="button">🎯 MNM 킬내기</button>
     <button class="mode-btn" id="modeBtnRandom" type="button">🎲 순서 정하기</button>
   </div>
@@ -1989,6 +2144,9 @@
   var matchScoreB = "";
   var matchError = "";
   var confirmDeleteMatchId = null;
+  // 경기 유형 — "league"(리그) | "friendly"(친선전). 새로 경기 입력 모달을 열 때마다
+  // "league"로 초기화된다(기본 선택값은 항상 리그).
+  var matchType = "league";
 
   /* ---------- PUBG 킬내기 UI 상태 ---------- */
   // 어떤 모드를 보고 있는지 — 축구 데이터/PUBG 데이터 자체와는 무관한, 순수
@@ -2061,6 +2219,9 @@
 
   // 시즌이 바뀌어도 끊기지 않는 전체 기록(state.allMatches)에서 그 팀의
   // 통산 승/무/패·득실을 집계한다 — 연승 표시와 AI 예측이 여기 기반함.
+  // state.allMatches에는 리그 경기와 친선전이 함께 들어있으므로(리그 순위와
+  // 무관하게 "전체 전적"을 구성하는 것이 이 함수의 목적), 이 함수가 반환하는
+  // 값은 항상 "리그+친선전을 합친 통산 기록"이다.
   function allTimeStats(teamId) {
     var w = 0, d = 0, l = 0, gf = 0, ga = 0;
     (state.allMatches || []).forEach(function (m) {
@@ -2076,7 +2237,122 @@
       else d++;
     });
     var p = w + d + l;
-    return { p: p, pts: w * 3 + d, gd: gf - ga };
+    return { p: p, w: w, d: d, l: l, gf: gf, ga: ga, pts: w * 3 + d, gd: gf - ga, winRate: winRatePct(w, p) };
+  }
+
+  // 승률 = 승리 경기 수 ÷ 전체 경기 수 × 100, 소수점 반올림한 정수(%)로 반환.
+  // 전체 경기 수가 0이면(아직 한 경기도 안 뛴 팀) 0%로 취급한다.
+  function winRatePct(w, p) {
+    if (!p) return 0;
+    return Math.round((w / p) * 100);
+  }
+
+  /* ==========================================================
+     레이팅 시스템(Elo 방식)
+     - 팀은 별도 필드로 레이팅을 들고 있지 않는다. 대신 이 앱의 다른 통산 지표들
+       (allTimeStats, winStreak 등)과 동일하게 state.allMatches를 그때그때
+       다시 훑어서 "가장 최근에 레이팅 정보가 저장된 경기"의 사후(after) 레이팅을
+       그 팀의 현재 레이팅으로 삼는다. 그런 경기가 하나도 없으면(아직 레이팅
+       계산이 적용된 경기를 한 번도 안 뛰었으면) 최초 레이팅 1600으로 취급한다.
+     - 장점: 경기를 삭제해도(removeMatch) 그 경기가 allMatches에서 빠지는 순간
+       "가장 최근 경기"가 자동으로 그 이전 경기로 바뀌므로, 되돌리기 로직을
+       따로 만들 필요가 없다.
+     - 리그 경기 이전에 저장돼 있던(레이팅 기능이 없던 시절의) 옛 경기에는
+       ratingA/ratingB가 없으므로 그대로 건너뛴다 — 즉 이 기능이 추가된 시점
+       이후 처음 치르는 경기부터 두 팀 모두 1600을 기준으로 계산이 시작된다.
+     ========================================================== */
+
+  var RATING_START = 1600;
+  // 표준 Elo에서 널리 쓰이는 K-계수. 값이 클수록 한 경기의 레이팅 변동폭이 커진다.
+  var ELO_K_FACTOR = 32;
+
+  function eloExpected(ratingSelf, ratingOpponent) {
+    return 1 / (1 + Math.pow(10, (ratingOpponent - ratingSelf) / 400));
+  }
+
+  // 연승/연패 길이에 따른 레이팅 변동 가중치.
+  // 1~2연승/연패: 기본(1.0) · 3연승/연패: ×1.15 · 4연승/연패: ×1.25 · 5연승/연패 이상: ×1.40
+  function streakWeight(length) {
+    if (length >= 5) return 1.40;
+    if (length === 4) return 1.25;
+    if (length === 3) return 1.15;
+    return 1.0;
+  }
+
+  // 이번에 등록하려는 경기를 반영하기 "직전"까지의 연승/연패 스트릭을 구한다.
+  // winStreak()과 달리 연패(loss) 스트릭도 함께 추적하고, 무승부를 만나면
+  // 승/패 스트릭 모두 끊긴 것으로 본다(길이 0, 타입 없음).
+  function currentStreakInfo(teamId) {
+    var all = state.allMatches || [];
+    var length = 0, type = null;
+    for (var i = all.length - 1; i >= 0; i--) {
+      var m = all[i];
+      if (m.teamAId !== teamId && m.teamBId !== teamId) continue;
+      var isA = m.teamAId === teamId;
+      var mine = isA ? m.scoreA : m.scoreB;
+      var theirs = isA ? m.scoreB : m.scoreA;
+      var result = mine > theirs ? "win" : (mine < theirs ? "loss" : "draw");
+      if (result === "draw") break;
+      if (type === null) { type = result; length = 1; }
+      else if (result === type) { length++; }
+      else break;
+    }
+    return { type: type, length: length };
+  }
+
+  // 그 팀이 관련된 가장 최근 경기 중 레이팅 정보(ratingA/ratingB)가 저장된
+  // 경기를 찾아 "현재 레이팅"과 "그 경기에서의 변동량"을 함께 돌려준다.
+  // 그런 경기가 없으면(신규 팀이거나, 레이팅 기능 이전 경기만 있으면) 최초
+  // 레이팅(1600)과 변동량 null을 돌려준다.
+  function ratingInfoForTeam(teamId) {
+    var all = state.allMatches || [];
+    for (var i = all.length - 1; i >= 0; i--) {
+      var m = all[i];
+      if (m.teamAId === teamId && m.ratingA) {
+        return { rating: m.ratingA.after, delta: m.ratingA.delta };
+      }
+      if (m.teamBId === teamId && m.ratingB) {
+        return { rating: m.ratingB.after, delta: m.ratingB.delta };
+      }
+    }
+    return { rating: RATING_START, delta: null };
+  }
+
+  // ↑25 / ↓18 처럼 화살표 + 절댓값으로 표시할 문자열. delta가 null이면(아직
+  // 레이팅이 반영된 경기가 없으면) 빈 문자열을 돌려준다.
+  function formatRatingDelta(delta) {
+    if (delta == null) return "";
+    if (delta > 0) return "↑" + delta;
+    if (delta < 0) return "↓" + Math.abs(delta);
+    return "±0";
+  }
+
+  // 두 팀의 경기 결과를 반영해 Elo 레이팅 변동을 계산한다.
+  // - 기대 승률(eloExpected) 대비 실제 결과로 기본 변동량을 구하고,
+  // - 각 팀 자신의 연승/연패 스트릭(이 경기를 포함한 길이)에 따라 가중치를 곱하고,
+  // - 마지막으로 경기 유형(리그 100% / 친선전 50%)에 따라 한 번 더 줄인 뒤,
+  // - 그 결과를 반올림해 정수로 확정한다(양쪽 팀 각각 독립적으로 반올림).
+  function computeRatingChange(ratingA, ratingB, scoreA, scoreB, streakA, streakB, type) {
+    var expectedA = eloExpected(ratingA, ratingB);
+    var expectedB = 1 - expectedA;
+    var actualA = scoreA > scoreB ? 1 : (scoreA < scoreB ? 0 : 0.5);
+    var actualB = 1 - actualA;
+
+    var baseDeltaA = ELO_K_FACTOR * (actualA - expectedA);
+    var baseDeltaB = ELO_K_FACTOR * (actualB - expectedB);
+
+    var resultA = actualA === 1 ? "win" : (actualA === 0 ? "loss" : "draw");
+    var resultB = actualB === 1 ? "win" : (actualB === 0 ? "loss" : "draw");
+
+    var newStreakLenA = resultA === "draw" ? 0 : (streakA.type === resultA ? streakA.length + 1 : 1);
+    var newStreakLenB = resultB === "draw" ? 0 : (streakB.type === resultB ? streakB.length + 1 : 1);
+
+    var typeFactor = type === "friendly" ? 0.5 : 1;
+
+    var deltaA = Math.round(baseDeltaA * streakWeight(newStreakLenA) * typeFactor);
+    var deltaB = Math.round(baseDeltaB * streakWeight(newStreakLenB) * typeFactor);
+
+    return { deltaA: deltaA, deltaB: deltaB };
   }
 
   // 전체 기록을 최신 순으로 훑어, 그 팀이 연속으로 이긴 경기 수를 센다 — 시즌이
@@ -2202,6 +2478,20 @@
       });
   }
 
+  // "전체 전적" 탭 전용 — 리그 순위(state.teams의 w/d/l/gf/ga, 리그 경기만 반영)와
+  // 달리, 각 팀의 통산(리그+친선전) 기록을 allTimeStats()로 집계해 승률 순으로
+  // 정렬한다. 삭제된 팀은 제외하고, 현재 남아있는 팀만 보여준다.
+  function sortedTeamsOverall() {
+    return state.teams
+      .map(function (t) { return { team: t, s: allTimeStats(t.id), rating: ratingInfoForTeam(t.id) }; })
+      .sort(function (a, b) {
+        if (b.s.winRate !== a.s.winRate) return b.s.winRate - a.s.winRate;
+        if (b.s.pts !== a.s.pts) return b.s.pts - a.s.pts;
+        if (b.s.gd !== a.s.gd) return b.s.gd - a.s.gd;
+        return a.team.name.localeCompare(b.team.name, "ko");
+      });
+  }
+
   function zoneFor(rank, total) {
     if (total >= 4 && rank === 1) return "leader";
     if (total >= 8 && rank >= 2 && rank <= 4) return "europa";
@@ -2303,6 +2593,7 @@
 
     html += '<div class="tabbar">' +
       '<button class="tab-btn' + (activeTab === "current" ? " active" : "") + '" data-role="tab-current" type="button">이번 시즌</button>' +
+      '<button class="tab-btn' + (activeTab === "overall" ? " active" : "") + '" data-role="tab-overall" type="button">전체 전적</button>' +
       '<button class="tab-btn' + (activeTab === "history" ? " active" : "") + '" data-role="tab-history" type="button">시즌 기록' +
       (historyLoaded && historyList.length ? ' <span class="tab-count">' + historyList.length + '</span>' : '') +
       '</button>' +
@@ -2311,6 +2602,14 @@
     if (activeTab === "history") {
       html += renderHistoryTab();
       if (championModalOpen) html += renderChampionModal(ranked, total);
+      appEl.innerHTML = html;
+      wireEvents();
+      addBtn.style.display = "none";
+      return;
+    }
+
+    if (activeTab === "overall") {
+      html += renderOverallTab();
       appEl.innerHTML = html;
       wireEvents();
       addBtn.style.display = "none";
@@ -2338,9 +2637,16 @@
         html += '<div class="rank ' + (zone === "leader" ? "leader" : "") + '">' + rank + '</div>';
         html += '<div class="crest" style="' + crestStyle(t) + '">' + escapeHtml(initials(t.name)) + '</div>';
         var streak = winStreak(t.id);
-        html += '<div class="team-cell"><div class="team-name">' + escapeHtml(t.name || "이름 없음") + '</div>' +
+        var teamRating = ratingInfoForTeam(t.id);
+        var ratingDeltaCls = teamRating.delta == null ? "" : (teamRating.delta > 0 ? " up" : (teamRating.delta < 0 ? " down" : ""));
+        html += '<div class="team-cell">';
+        html += '<div class="team-name-line"><div class="team-name">' + escapeHtml(t.name || "이름 없음") + '</div>' +
           (streak >= 2 ? '<span class="streak-badge">🔥' + streak + '연승</span>' : '') +
           '</div>';
+        html += '<div class="rating-line">Rating <span class="rating-value">' + teamRating.rating + '</span>' +
+          (teamRating.delta != null ? '<span class="rating-delta' + ratingDeltaCls + '">' + formatRatingDelta(teamRating.delta) + '</span>' : '') +
+          '</div>';
+        html += '</div>';
         html += '<div class="played">' + c.p + '</div>';
         html += '<div class="pts-pill">' + c.pts + '</div>';
         html += '<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>';
@@ -2405,6 +2711,16 @@
     wireEvents();
   }
 
+  // 경기 유형 뱃지 — 기존 데이터에는 type이 없을 수 있으므로 항상
+  // (m.type ?? "league") 방식으로 취급해 리그 경기로 fallback한다.
+  function matchTypeOf(m) {
+    return m && m.type === "friendly" ? "friendly" : "league";
+  }
+  function matchTypeBadge(m) {
+    var type = matchTypeOf(m);
+    return '<span class="match-type-badge ' + type + '">' + (type === "friendly" ? "친선" : "리그") + '</span>';
+  }
+
   function renderMatchList() {
     var matches = state.matches || [];
     if (matches.length === 0) return "";
@@ -2412,20 +2728,73 @@
     html += '<div class="match-list-title">경기 기록 <span class="tab-count">' + matches.length + '</span></div>';
     matches.forEach(function (m) {
       if (confirmDeleteMatchId === m.id) {
-        html += '<div class="match-row-confirm">이 경기 기록을 삭제할까요? (결과가 순위에서 취소돼요) ' +
+        html += '<div class="match-row-confirm">이 경기 기록을 삭제할까요? (' +
+          (matchTypeOf(m) === "friendly" ? "친선전 기록만 지워지고 리그 순위는 그대로예요" : "결과가 리그 순위에서도 취소돼요") + ') ' +
           '<span style="display:flex;gap:6px;flex-shrink:0;">' +
           '<button class="confirm-yes" data-role="confirm-delete-match" data-id="' + m.id + '" type="button">삭제</button>' +
           '<button class="confirm-no" data-role="cancel-delete-match" type="button">취소</button></span></div>';
       } else {
+        html += '<div class="match-row-wrap">';
         html += '<div class="match-row">';
+        html += matchTypeBadge(m);
         html += '<span class="match-team">' + escapeHtml(teamNameById(m.teamAId)) + '</span>';
         html += '<span class="match-score">' + m.scoreA + ' - ' + m.scoreB + '</span>';
         html += '<span class="match-team right">' + escapeHtml(teamNameById(m.teamBId)) + '</span>';
         html += '<button class="match-delete" data-role="delete-match" data-id="' + m.id + '" type="button" aria-label="경기 기록 삭제">' + ICON_TRASH + '</button>';
         html += '</div>';
+        html += renderMatchRatingLine(m);
+        html += '</div>';
       }
     });
     html += '</div>';
+    return html;
+  }
+
+  // 경기 하나의 레이팅 변동을 "A팀 1600 → 1624 (+24)" 형태로 표시한다. 레이팅
+  // 정보가 없는(기능 추가 이전) 경기라면 빈 문자열을 돌려줘 아무것도 그리지 않는다.
+  function renderMatchRatingLine(m) {
+    if (!m.ratingA || !m.ratingB) return "";
+    function part(teamId, r) {
+      var cls = r.delta > 0 ? " up" : (r.delta < 0 ? " down" : "");
+      var deltaStr = r.delta > 0 ? ("+" + r.delta) : String(r.delta);
+      return '<span class="match-rating-team">' + escapeHtml(teamNameById(teamId)) + " " + r.before + " → " + r.after +
+        ' <span class="rating-delta' + cls + '">(' + deltaStr + ')</span></span>';
+    }
+    return '<div class="match-rating-line">' + part(m.teamAId, m.ratingA) + part(m.teamBId, m.ratingB) + '</div>';
+  }
+
+  // "전체 전적" 탭 — 리그 순위와 별도로, 각 팀의 통산(리그+친선전) 경기 수·
+  // 승/무/패·승률을 보여준다. 리그 테이블과 같은 카드/타이포그래피를 재사용하되
+  // 컬럼 구성만 다르다.
+  function renderOverallTab() {
+    var rows = sortedTeamsOverall();
+    var html = "";
+    if (rows.length === 0) {
+      html += '<div class="empty">아직 등록된 팀이 없어요.<br>오른쪽 아래 + 버튼으로 팀을 추가해보세요.</div>';
+      return html;
+    }
+    html += '<div class="overall-caption"><span></span><span>팀</span><span>경기</span><span>승</span><span>무</span><span>패</span><span>승률</span><span>레이팅</span></div>';
+    html += '<div class="overall-table">';
+    rows.forEach(function (entry) {
+      var t = entry.team;
+      var s = entry.s;
+      var r = entry.rating;
+      var deltaCls = r.delta == null ? "" : (r.delta > 0 ? " up" : (r.delta < 0 ? " down" : ""));
+      html += '<div class="overall-row">';
+      html += '<div class="crest" style="' + crestStyle(t) + '">' + escapeHtml(initials(t.name)) + '</div>';
+      html += '<div class="team-name">' + escapeHtml(t.name || "이름 없음") + '</div>';
+      html += '<div class="played">' + s.p + '</div>';
+      html += '<div class="played">' + s.w + '</div>';
+      html += '<div class="played">' + s.d + '</div>';
+      html += '<div class="played">' + s.l + '</div>';
+      html += '<div class="pts-pill">' + s.winRate + '%</div>';
+      html += '<div class="overall-rating"><span class="rating-value">' + r.rating + '</span>' +
+        (r.delta != null ? '<span class="rating-delta' + deltaCls + '">' + formatRatingDelta(r.delta) + '</span>' : '') +
+        '</div>';
+      html += '</div>';
+    });
+    html += '</div>';
+    html += '<div class="overall-hint">경기 수·승/무/패·승률·레이팅은 리그 경기와 친선전을 모두 합친 통산 기록이에요.</div>';
     return html;
   }
 
@@ -2478,6 +2847,15 @@
     html += '<div class="match-modal-title">경기 결과 입력</div>';
 
     html += '<div class="match-form">';
+
+    html += '<div class="match-type-select" role="group" aria-label="경기 유형 선택">';
+    html += '<button class="match-type-btn' + (matchType === "league" ? " active" : "") + '" data-role="match-type" data-type="league" type="button">리그</button>';
+    html += '<button class="match-type-btn' + (matchType === "friendly" ? " active" : "") + '" data-role="match-type" data-type="friendly" type="button">친선전</button>';
+    html += '</div>';
+    html += '<div class="match-type-hint">' +
+      (matchType === "friendly" ? "친선전은 전체 전적에만 반영되고 리그 순위에는 영향을 주지 않아요." : "리그 경기는 리그 순위와 전체 전적에 모두 반영돼요.") +
+      '</div>';
+
     html += '<div class="match-pair">';
     html += '<select class="match-team-select" id="matchTeamASelect" data-role="match-team-a">';
     html += '<option value="">팀 선택</option>';
@@ -2797,8 +3175,17 @@
         matchScoreA = "";
         matchScoreB = "";
         matchError = "";
+        matchType = "league"; // 모달을 열 때마다 기본 선택값은 항상 "리그"
         championModalOpen = false;
         matchModalOpen = true;
+        render();
+      });
+    });
+
+    appEl.querySelectorAll('[data-role="match-type"]').forEach(function (el) {
+      el.addEventListener("click", function () {
+        var type = el.getAttribute("data-type");
+        matchType = type === "friendly" ? "friendly" : "league";
         render();
       });
     });
@@ -2903,6 +3290,13 @@
     appEl.querySelectorAll('[data-role="tab-current"]').forEach(function (el) {
       el.addEventListener("click", function () {
         activeTab = "current";
+        render();
+      });
+    });
+
+    appEl.querySelectorAll('[data-role="tab-overall"]').forEach(function (el) {
+      el.addEventListener("click", function () {
+        activeTab = "overall";
         render();
       });
     });
@@ -3074,20 +3468,34 @@
     if (isNaN(scoreB) || scoreB < 0) scoreB = 0;
     if (scoreB > 99) scoreB = 99;
 
-    teamA.gf += scoreA;
-    teamA.ga += scoreB;
-    teamB.gf += scoreB;
-    teamB.ga += scoreA;
-    if (scoreA > scoreB) {
-      teamA.w += 1;
-      teamB.l += 1;
-    } else if (scoreA < scoreB) {
-      teamB.w += 1;
-      teamA.l += 1;
-    } else {
-      teamA.d += 1;
-      teamB.d += 1;
+    var type = matchType === "friendly" ? "friendly" : "league";
+
+    // 리그 경기만 팀의 승/무/패·득실(=리그 순위)에 반영한다. 친선전은 이
+    // 블록을 건너뛰므로 리그 순위·승점·승무패에는 전혀 영향을 주지 않는다.
+    if (type === "league") {
+      teamA.gf += scoreA;
+      teamA.ga += scoreB;
+      teamB.gf += scoreB;
+      teamB.ga += scoreA;
+      if (scoreA > scoreB) {
+        teamA.w += 1;
+        teamB.l += 1;
+      } else if (scoreA < scoreB) {
+        teamB.w += 1;
+        teamA.l += 1;
+      } else {
+        teamA.d += 1;
+        teamB.d += 1;
+      }
     }
+
+    // 레이팅 계산은 리그/친선전 모두 대상이다(반영 비율만 다름) — 이 경기를
+    // 반영하기 "직전" 시점의 레이팅과 연승/연패 스트릭을 먼저 구해둔다.
+    var ratingBeforeA = ratingInfoForTeam(teamA.id).rating;
+    var ratingBeforeB = ratingInfoForTeam(teamB.id).rating;
+    var streakA = currentStreakInfo(teamA.id);
+    var streakB = currentStreakInfo(teamB.id);
+    var ratingChange = computeRatingChange(ratingBeforeA, ratingBeforeB, scoreA, scoreB, streakA, streakB, type);
 
     var record = {
       id: uid(),
@@ -3098,8 +3506,19 @@
       playedAt: new Date().toISOString(),
       // 이 경기가 어느 시즌 기록에 속하는지 — 시즌이 끝날 때 endSeason()이
       // 채워준다. 아직 진행 중인 시즌의 경기는 null.
-      seasonId: null
+      seasonId: null,
+      // "league"(리그) | "friendly"(친선전). 리그 경기만 리그 순위에 반영되고,
+      // 두 유형 모두 전체 경기 기록(state.matches/allMatches)에는 저장된다.
+      type: type,
+      // 이 경기 전/후 레이팅과 변동량 스냅샷 — 팀의 "현재 레이팅"은 이 값들을
+      // allMatches에서 다시 훑어 구하므로(ratingInfoForTeam), 이 경기를 나중에
+      // 삭제해도 별도 되돌리기 로직 없이 자동으로 그 이전 레이팅으로 복원된다.
+      ratingA: { before: ratingBeforeA, after: ratingBeforeA + ratingChange.deltaA, delta: ratingChange.deltaA },
+      ratingB: { before: ratingBeforeB, after: ratingBeforeB + ratingChange.deltaB, delta: ratingChange.deltaB }
     };
+    // 리그든 친선전이든 "이번 시즌 경기 기록"과 "통산 전체 전적" 양쪽에 모두
+    // 저장한다 — 리그 순위 반영 여부만 위에서 이미 갈렸을 뿐, 기록 자체는
+    // 항상 함께 쌓인다(전체 전적 = 리그 + 친선전).
     state.matches = (state.matches || []).concat([record]);
     state.allMatches = (state.allMatches || []).concat([record]);
     exitExampleMode();
@@ -3117,27 +3536,32 @@
       return;
     }
 
-    var teamA = state.teams.find(function (t) { return t.id === m.teamAId; });
-    var teamB = state.teams.find(function (t) { return t.id === m.teamBId; });
-    if (teamA) {
-      teamA.gf -= m.scoreA;
-      teamA.ga -= m.scoreB;
-      if (m.scoreA > m.scoreB) teamA.w -= 1;
-      else if (m.scoreA < m.scoreB) teamA.l -= 1;
-      else teamA.d -= 1;
-      ["w", "d", "l", "gf", "ga"].forEach(function (f) { if (teamA[f] < 0) teamA[f] = 0; });
-    }
-    if (teamB) {
-      teamB.gf -= m.scoreB;
-      teamB.ga -= m.scoreA;
-      if (m.scoreB > m.scoreA) teamB.w -= 1;
-      else if (m.scoreB < m.scoreA) teamB.l -= 1;
-      else teamB.d -= 1;
-      ["w", "d", "l", "gf", "ga"].forEach(function (f) { if (teamB[f] < 0) teamB[f] = 0; });
+    // 리그 경기일 때만 팀의 승/무/패·득실(=리그 순위)을 원상복구한다. 친선전은
+    // 애초에 리그 순위에 반영된 적이 없으므로 이 블록을 건너뛰고, 아래에서
+    // 전체 경기 기록에서만 지운다. 기존 데이터(type 없음)는 리그로 취급한다.
+    if (matchTypeOf(m) === "league") {
+      var teamA = state.teams.find(function (t) { return t.id === m.teamAId; });
+      var teamB = state.teams.find(function (t) { return t.id === m.teamBId; });
+      if (teamA) {
+        teamA.gf -= m.scoreA;
+        teamA.ga -= m.scoreB;
+        if (m.scoreA > m.scoreB) teamA.w -= 1;
+        else if (m.scoreA < m.scoreB) teamA.l -= 1;
+        else teamA.d -= 1;
+        ["w", "d", "l", "gf", "ga"].forEach(function (f) { if (teamA[f] < 0) teamA[f] = 0; });
+      }
+      if (teamB) {
+        teamB.gf -= m.scoreB;
+        teamB.ga -= m.scoreA;
+        if (m.scoreB > m.scoreA) teamB.w -= 1;
+        else if (m.scoreB < m.scoreA) teamB.l -= 1;
+        else teamB.d -= 1;
+        ["w", "d", "l", "gf", "ga"].forEach(function (f) { if (teamB[f] < 0) teamB[f] = 0; });
+      }
     }
 
     state.matches = matches.filter(function (x) { return x.id !== id; });
-    // 잘못 입력해 되돌리는 경기이므로, 통산 기록(연승/AI 예측용)에서도 함께 제외
+    // 리그/친선전 모두 전체 경기 기록(통산 기록/연승/AI 예측용)에서는 함께 제외한다.
     state.allMatches = (state.allMatches || []).filter(function (x) { return x.id !== id; });
     confirmDeleteMatchId = null;
     persist();
@@ -3193,6 +3617,18 @@
     };
   }
 
+  // 경기 전/후 레이팅 스냅샷({before, after, delta}) 정규화. 레이팅 기능이
+  // 생기기 전에 저장된 경기이거나 값이 손상돼 있으면 null을 돌려주고,
+  // ratingInfoForTeam()은 null인 경기를 만나면 그냥 건너뛴다.
+  function normalizeRatingSnapshot(r) {
+    if (!r || typeof r !== "object") return null;
+    var before = Number(r.before);
+    var after = Number(r.after);
+    var delta = Number(r.delta);
+    if (isNaN(before) || isNaN(after)) return null;
+    return { before: before, after: after, delta: isNaN(delta) ? (after - before) : delta };
+  }
+
   function normalizeMatch(m) {
     return {
       id: String(m.id || uid()),
@@ -3201,7 +3637,15 @@
       scoreA: Number(m.scoreA) || 0,
       scoreB: Number(m.scoreB) || 0,
       playedAt: String(m.playedAt || ""),
-      seasonId: (m.seasonId == null) ? null : String(m.seasonId)
+      seasonId: (m.seasonId == null) ? null : String(m.seasonId),
+      // 기존에 저장된 경기에는 경기 유형(type) 필드가 없을 수 있다 — 그런
+      // 경우는 항상 "league"(리그)로 취급해 기존 기록이 깨지지 않게 한다.
+      type: (m.type === "friendly") ? "friendly" : "league",
+      // 레이팅 기능이 생기기 전 경기에는 이 필드들이 없을 수 있다 — 그런
+      // 경기는 null로 정규화되어 레이팅 계산(ratingInfoForTeam)에서 자동으로
+      // 제외된다(그 다음 경기부터 1600을 기준으로 다시 계산이 시작됨).
+      ratingA: normalizeRatingSnapshot(m.ratingA),
+      ratingB: normalizeRatingSnapshot(m.ratingB)
     };
   }
 
@@ -4554,7 +4998,7 @@
   }
 
   /* ==========================================================
-     모드 전환 (⚽ MNM LEAGUE ↔ 🎯 PUBG 킬내기 ↔ 🎲 순서 정하기)
+     모드 전환 (⚽ MNM FOOTBALL ↔ 🎯 PUBG 킬내기 ↔ 🎲 순서 정하기)
      ========================================================== */
 
   var modeBtnSoccer = document.getElementById("modeBtnSoccer");
@@ -4935,7 +5379,7 @@
   }
 
   // 로그인 성공 직후 ~ 그 계정의 app_state 로딩이 끝나기 전까지 보여주는 화면.
-  // mainUI는 계속 숨긴 채로 두고(= MNM LEAGUE/PUBG 화면은 이 시점엔 절대 노출되지
+  // mainUI는 계속 숨긴 채로 두고(= MNM FOOTBALL/PUBG 화면은 이 시점엔 절대 노출되지
   // 않음), authScreen 자리에 안내 문구만 띄운다.
   function showAccountLoadingScreen() {
     if (mainUIEl) mainUIEl.style.display = "none";
