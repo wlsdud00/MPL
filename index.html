@@ -1711,11 +1711,131 @@
   }
   .pubg-history-game-row:first-child { border-top: none; }
   .pubg-history-game-row .gnum { color: var(--ink); font-weight: 700; flex: 0 0 100%; }
+
+  /* ==========================================================
+     로그인 / 회원가입
+     ========================================================== */
+
+  .auth-screen {
+    width: 100%;
+    max-width: 380px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 70vh;
+  }
+
+  .auth-card {
+    width: 100%;
+    background: var(--surface);
+    border-radius: 20px;
+    padding: 30px 24px;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .auth-eyebrow {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 0.64rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--pitch-deep);
+    text-align: center;
+  }
+
+  .auth-title {
+    font-family: "Oswald", "Arial Narrow", sans-serif;
+    font-weight: 700;
+    font-size: 1.4rem;
+    color: var(--ink);
+    text-align: center;
+  }
+
+  .auth-field { display: flex; flex-direction: column; gap: 6px; }
+  .auth-field .name-input { width: 100%; }
+
+  .auth-error {
+    font-size: 0.8rem;
+    color: var(--relegation);
+    background: var(--relegation-soft);
+    border-radius: 8px;
+    padding: 8px 10px;
+    text-align: center;
+  }
+
+  .auth-info {
+    font-size: 0.8rem;
+    color: var(--pitch-deep);
+    background: var(--pitch-soft);
+    border-radius: 8px;
+    padding: 8px 10px;
+    text-align: center;
+  }
+
+  .auth-submit {
+    font-family: "Inter", sans-serif;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--on-accent);
+    background: var(--pitch);
+    border: none;
+    border-radius: 10px;
+    padding: 12px;
+  }
+  .auth-submit:disabled { opacity: 0.6; }
+
+  .auth-toggle {
+    font-family: "Inter", sans-serif;
+    font-size: 0.8rem;
+    color: var(--ink-muted);
+    background: transparent;
+    border: none;
+    padding: 4px;
+    text-align: center;
+  }
+  .auth-toggle b { color: var(--pitch-deep); font-weight: 700; }
+
+  /* 로그인 후 화면 상단의 아주 작은 사용자 표시줄 — 로그아웃은 일부러 버튼처럼
+     두드러지지 않게, 그냥 옅은 글자 링크 느낌으로만 둔다. */
+  .user-bar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    font-size: 0.72rem;
+    color: var(--ink-muted);
+    padding: 0 2px;
+    opacity: 0.75;
+  }
+  .user-bar .user-username { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .user-bar .user-username::before { content: "👤 "; }
+
+  .logout-link {
+    font-family: "Inter", sans-serif;
+    font-size: 0.72rem;
+    color: var(--ink-muted);
+    background: transparent;
+    border: none;
+    padding: 2px 4px;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    flex-shrink: 0;
+  }
+  .logout-link:disabled { opacity: 0.5; }
 </style>
 </head>
 <body>
 
+<div class="auth-screen" id="authScreen"></div>
+
+<div id="mainUI" style="display:none;">
 <div class="app-shell">
+  <div class="user-bar" id="userBar">
+    <span class="user-username" id="userUsernameLabel"></span>
+    <button class="logout-link" id="logoutBtn" type="button">로그아웃</button>
+  </div>
   <div class="mode-switch" id="modeSwitch">
     <button class="mode-btn active" id="modeBtnSoccer" type="button">⚽ MNM LEAGUE</button>
     <button class="mode-btn" id="modeBtnPubg" type="button">🎯 MNM 킬내기</button>
@@ -1727,6 +1847,7 @@
 <button class="fab" id="addBtn" aria-label="팀 추가" type="button">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
 </button>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -1738,11 +1859,47 @@
   // 팀/모바일 어디서든 SUPABASE_KEY만 채워 넣으면 바로 동작해요.
   var SUPABASE_URL = "https://albugxbnkahyfdtfxozf.supabase.co";
   var SUPABASE_KEY = "sb_publishable_uvxldxcPoi8jR-LGa47TZA_lGphjrFl";
-  var ROW_ID = "main"; // app_state 테이블의 고정 행 id — 리그 전체 상태가 이 한 행에 저장됩니다.
+  // app_state는 더 이상 "main"이라는 고정된 공용 행 하나를 쓰지 않는다.
+  // 이제 한 사용자당 app_state 행을 하나씩 갖고, 그 행은 user_id(=로그인한
+  // Supabase Auth 계정의 auth.uid())로 구분한다. currentUserId는 로그인 전엔
+  // null이고, 로그인에 성공하면 그 사람의 uid로 채워진다 — 모든 조회/저장은
+  // 반드시 이 값을 기준으로만 이뤄진다(로그인 안 된 상태에서는 아무것도
+  // 읽거나 쓰지 않는다).
+  var currentUserId = null;
 
   var supabaseClient = (window.supabase && SUPABASE_KEY && SUPABASE_KEY.indexOf("여기에") !== 0)
     ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
     : null;
+
+  /* ---------- 로그인 / 회원가입: "아이디" 방식을 Supabase Auth 위에 얹기 ----------
+     Supabase Auth는 기본적으로 이메일 형식을 요구하지만, 이 앱은 사용자에게
+     이메일을 절대 요구하지 않고 "아이디 + 비밀번호"만 입력받는다. 방법은:
+       실제로 입력받은 username을 정규화(trim + 소문자)한 뒤, 그 뒤에 실재하지
+       않는 고정 도메인(@mnmgaming.local)을 붙여서 Supabase Auth 내부용
+       이메일처럼 사용한다. 예) "minsu" -> "minsu@mnmgaming.local".
+     화면에는 이 내부용 문자열이 절대 노출되지 않고(입력창에도, 로그인 후
+     표시되는 이름에도), 항상 사용자가 입력한 "아이디"만 보여준다.
+     이 내부용 이메일이 Supabase auth.users 테이블에서 유일해야 하므로,
+     결과적으로 같은 이메일 규칙 덕분에 아이디 중복 가입도 자동으로 막힌다
+     (회원가입 시 이미 존재하는 아이디면 Supabase가 "User already registered"
+     오류를 돌려준다). 여기에 더해 profiles 테이블에도 username에 UNIQUE
+     제약을 걸어 이중으로 막는다(아래 SQL 참고). 비밀번호는 이 앱의 어떤
+     테이블에도 저장하지 않고, 전부 Supabase Auth가 자체적으로(해시하여)
+     관리한다 — 우리는 signUp/signInWithPassword만 호출할 뿐 비밀번호 값을
+     직접 다루거나 저장하지 않는다.
+     아이디는 이메일 로컬파트로도 쓰이므로 영문/숫자/밑줄(_)/하이픈(-)만
+     허용한다(공백·한글·특수문자는 이메일 형식 검증에서 문제가 될 수 있음). */
+  var AUTH_USERNAME_DOMAIN = "@mnmgaming.local";
+  var AUTH_USERNAME_RE = /^[A-Za-z0-9_-]{2,20}$/;
+
+  function usernameToAuthEmail(username) {
+    return String(username || "").trim().toLowerCase() + AUTH_USERNAME_DOMAIN;
+  }
+  function authEmailToUsername(email) {
+    email = String(email || "");
+    var idx = email.indexOf(AUTH_USERNAME_DOMAIN);
+    return idx > 0 ? email.slice(0, idx) : email;
+  }
 
   // Fresh install starts with a single blank, unnamed team card instead of
   // canned example data — just one empty row ready to be filled in.
@@ -1816,6 +1973,20 @@
   var appEl = document.getElementById("app");
   var addBtn = document.getElementById("addBtn");
   var pubgAppEl = document.getElementById("pubgApp");
+
+  /* ---------- 로그인 / 회원가입 상태 ---------- */
+  var authScreenEl = document.getElementById("authScreen");
+  var mainUIEl = document.getElementById("mainUI");
+  var userUsernameLabelEl = document.getElementById("userUsernameLabel");
+  var logoutBtnEl = document.getElementById("logoutBtn");
+
+  var authMode = "login"; // "login" | "signup"
+  var authUsername = "";
+  var authPassword = "";
+  var authPasswordConfirm = "";
+  var authError = "";
+  var authInfo = "";
+  var authLoading = false;
 
   function uid() {
     return "t" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -2971,16 +3142,25 @@
   }
 
   function persist() {
-    if (!supabaseClient) return;
+    if (!supabaseClient || !currentUserId) return; // 로그인 전에는 아무 데이터도 쓰지 않음
     scheduleWrite();
   }
 
   function scheduleWrite() {
+    if (!currentUserId) return; // 저장 대기 중 로그아웃된 경우 안전장치
     if (writing) { pendingWrite = true; return; }
     writing = true;
     var body = toDocBody();
+    var forUserId = currentUserId;
+    // user_id에 UNIQUE 제약이 걸려 있으므로 onConflict: "user_id"로 upsert하면
+    // 이 사용자의 행이 없으면 새로 만들고, 있으면 그 행만 갱신한다. id 컬럼은
+    // 일부러 여기서 지정하지 않는다 — DB 쪽 기본값(gen_random_uuid())이
+    // 알아서 채우고, 기존 행을 갱신할 때는 그 행의 id가 그대로 유지된다.
     Promise.resolve(
-      supabaseClient.from("app_state").upsert({ id: ROW_ID, data: body, updated_at: new Date().toISOString() })
+      supabaseClient.from("app_state").upsert(
+        { user_id: forUserId, data: body, updated_at: new Date().toISOString() },
+        { onConflict: "user_id" }
+      )
     ).then(function (res) {
       if (res && res.error) throw res.error;
     }).catch(function () {
@@ -4136,14 +4316,74 @@
 
   renderBoth();
 
-  // Safety net: whatever else happens, never leave "불러오는 중" stuck forever.
-  setTimeout(function () {
-    var changed = false;
-    if (!historyLoaded) { historyLoaded = true; changed = true; }
-    if (changed) renderBoth();
-  }, 8000);
+  /* ==========================================================
+     로그인 / 회원가입 — 계정별로 완전히 분리된 데이터
+     ========================================================== */
+  // app_state는 이제 user_id(로그인한 계정의 auth.uid())로 구분되는, 계정당
+  // 하나씩의 행을 갖는다. startAppForUser(session)은 로그인에 성공할 때마다
+  // 호출되고, "지금 로드된 계정"과 "방금 로그인한 계정"이 다르면(계정 전환)
+  // 화면의 모든 상태를 먼저 깨끗하게 리셋한 다음 그 계정의 데이터를 새로
+  // 불러온다 — 그래야 로그아웃 직후 다른 계정으로 들어갔을 때 이전 계정의
+  // 팀/시즌 기록이 한순간이라도 화면에 남지 않는다.
 
-  (async function init() {
+  function resetAppStateToDefault() {
+    // 계정을 전환하거나 로그아웃할 때, 화면과 메모리에 남아있는 "이전
+    // 사용자"의 모든 흔적을 지운다 — 여기 나열된 값들은 전부 저장되는
+    // 데이터(state)이거나, 저장되진 않지만 특정 팀/시즌/모달을 가리키는
+    // 화면 상태라서 계정이 바뀌면 반드시 초기화해야 한다.
+    state.leagueName = "MNM Premier League";
+    state.teams = [{ id: uid(), name: "", w: 0, d: 0, l: 0, gf: 0, ga: 0, color: null }];
+    state.matches = [];
+    state.allMatches = [];
+    state.pubg = { currentSeason: null, seasons: [] };
+    exampleMode = true;
+    openId = null;
+    confirmDeleteId = null;
+    championModalOpen = false;
+    activeTab = "current";
+    historyList = [];
+    historyLoaded = false;
+    openHistoryId = null;
+    confirmDeleteHistoryId = null;
+    historyVisibleCount = HISTORY_PAGE_SIZE;
+    matchModalOpen = false;
+    matchTeamA = "";
+    matchTeamB = "";
+    matchScoreA = "";
+    matchScoreB = "";
+    matchError = "";
+    confirmDeleteMatchId = null;
+    currentMode = "soccer";
+    pubgActiveTab = "current";
+    pubgDraftTeams = [];
+    pubgDraftTarget = "20";
+    pubgSetupError = "";
+    pubgEntryModalOpen = false;
+    pubgEntryModalTeamId = null;
+    pubgEntryModalEditId = null;
+    pubgEntryKills = {};
+    pubgEntryBonus = "";
+    pubgEntryError = "";
+    confirmDeletePubgGameId = null;
+    openPubgHistoryId = null;
+    confirmDeletePubgHistoryId = null;
+  }
+
+  async function startAppForUser(session) {
+    var userId = session.user.id;
+    if (currentUserId === userId) return; // 이미 이 계정 데이터를 불러온 상태 — 중복 로드 방지
+    currentUserId = userId;
+    resetAppStateToDefault(); // 이전 계정(또는 초기 상태)의 흔적을 먼저 지움
+    renderBoth();
+
+    // Safety net: whatever else happens, never leave "불러오는 중" stuck forever.
+    setTimeout(function () {
+      if (currentUserId === userId && !historyLoaded) {
+        historyLoaded = true;
+        renderBoth();
+      }
+    }, 8000);
+
     if (!supabaseClient) {
       // SUPABASE_KEY가 비어있거나 CDN을 못 불러온 경우: 로컬 전용으로 동작
       historyLoaded = true;
@@ -4152,30 +4392,47 @@
     }
 
     try {
-      var res = await supabaseClient.from("app_state").select("data").eq("id", ROW_ID).maybeSingle();
+      var res = await supabaseClient.from("app_state").select("data").eq("user_id", userId).maybeSingle();
+      if (currentUserId !== userId) return; // 그 사이 로그아웃했거나 다른 계정으로 바뀜
       if (res.error) throw res.error;
       if (res.data && res.data.data) {
         applyRemote(res.data.data);
       } else {
-        // 이 프로젝트에서 처음 실행되는 경우: 지금 상태(빈 팀 1개)로 행을 만들어둠
+        // 이 계정으로 처음 로그인한 경우: 지금 상태(빈 팀 1개)로 이 계정
+        // 전용 행을 새로 만들어둔다. user_id에 UNIQUE 제약이 있으므로
+        // onConflict: "user_id"를 쓰면 실수로 같은 계정 행이 두 개
+        // 생기는 일도 없다.
         await Promise.resolve(
-          supabaseClient.from("app_state").upsert({ id: ROW_ID, data: toDocBody(), updated_at: new Date().toISOString() })
+          supabaseClient.from("app_state").upsert(
+            { user_id: userId, data: toDocBody(), updated_at: new Date().toISOString() },
+            { onConflict: "user_id" }
+          )
         ).catch(function () {});
       }
     } catch (e) {
       /* 최초 로드 실패: 로컬 기본 상태를 유지하고, 다음 편집 때 다시 저장을 시도함 */
     }
+    if (currentUserId !== userId) return;
     historyLoaded = true;
     renderBoth();
 
-    // 실시간 동기화: 다른 기기/브라우저에서 저장한 내용이 이 화면에도 바로 반영됨
+    // 실시간 동기화: 같은 계정으로 로그인한 다른 기기/브라우저에서 저장한
+    // 내용이 이 화면에도 바로 반영된다. filter가 user_id 기준이라 다른
+    // 계정의 변경사항은 애초에 이 채널로 들어오지 않는다.
+    subscribeRealtime(userId);
+  }
+
+  function subscribeRealtime(userId) {
+    unsubscribeRealtime();
+    if (!supabaseClient || !userId) return;
     try {
       realtimeChannel = supabaseClient
-        .channel("app_state_sync")
+        .channel("app_state_sync_" + userId)
         .on(
           "postgres_changes",
-          { event: "*", schema: "public", table: "app_state", filter: "id=eq." + ROW_ID },
+          { event: "*", schema: "public", table: "app_state", filter: "user_id=eq." + userId },
           function (payload) {
+            if (currentUserId !== userId) return; // 그 사이 로그아웃/다른 계정으로 전환됨
             var row = payload && payload.new;
             if (!row || !row.data) return;
             applyRemote(row.data);
@@ -4195,7 +4452,245 @@
     } catch (e) {
       /* 실시간 채널 연결 실패: 이 탭은 계속 동작하되, 다른 기기의 변경사항만 실시간으로 못 받음 */
     }
-  })();
+  }
+
+  function unsubscribeRealtime() {
+    if (realtimeChannel && supabaseClient) {
+      try { supabaseClient.removeChannel(realtimeChannel); } catch (e) {}
+    }
+    realtimeChannel = null;
+  }
+
+  function renderAuthLoading() {
+    if (!authScreenEl) return;
+    authScreenEl.innerHTML = '<div class="auth-card"><div class="auth-eyebrow">MNM GAMING</div>' +
+      '<div class="auth-title">불러오는 중…</div></div>';
+  }
+
+  function renderAuthScreen() {
+    if (!authScreenEl) return;
+    var isSignup = authMode === "signup";
+    var html = '<div class="auth-card">';
+    html += '<div class="auth-eyebrow">MNM GAMING</div>';
+    html += '<div class="auth-title">' + (isSignup ? "회원가입" : "로그인") + '</div>';
+    if (authError) html += '<div class="auth-error">' + escapeHtml(authError) + '</div>';
+    if (authInfo) html += '<div class="auth-info">' + escapeHtml(authInfo) + '</div>';
+    html += '<div class="auth-field"><span class="field-label">아이디</span>' +
+      '<input class="name-input" type="text" data-role="auth-username" value="' + escapeHtml(authUsername) +
+      '" placeholder="영문/숫자/_/- 2~20자" autocomplete="username" /></div>';
+    html += '<div class="auth-field"><span class="field-label">비밀번호</span>' +
+      '<input class="name-input" type="password" data-role="auth-password" value="' + escapeHtml(authPassword) +
+      '" placeholder="6자 이상" autocomplete="' + (isSignup ? "new-password" : "current-password") + '" /></div>';
+    if (isSignup) {
+      html += '<div class="auth-field"><span class="field-label">비밀번호 확인</span>' +
+        '<input class="name-input" type="password" data-role="auth-password-confirm" value="' + escapeHtml(authPasswordConfirm) +
+        '" placeholder="비밀번호 다시 입력" autocomplete="new-password" /></div>';
+    }
+    html += '<button class="auth-submit" data-role="auth-submit" type="button"' + (authLoading ? " disabled" : "") + '>' +
+      (authLoading ? "처리 중…" : (isSignup ? "회원가입" : "로그인")) + '</button>';
+    html += '<button class="auth-toggle" data-role="auth-toggle" type="button">' +
+      (isSignup ? '이미 계정이 있나요? <b>로그인</b>' : '계정이 없나요? <b>회원가입</b>') + '</button>';
+    html += '</div>';
+    authScreenEl.innerHTML = html;
+    wireAuthEvents();
+  }
+
+  function wireAuthEvents() {
+    var usernameInput = authScreenEl.querySelector('[data-role="auth-username"]');
+    var passwordInput = authScreenEl.querySelector('[data-role="auth-password"]');
+    var passwordConfirmInput = authScreenEl.querySelector('[data-role="auth-password-confirm"]');
+    if (usernameInput) {
+      usernameInput.addEventListener("input", function () { authUsername = usernameInput.value; });
+      usernameInput.addEventListener("keydown", function (e) { if (e.key === "Enter") submitAuthForm(); });
+    }
+    if (passwordInput) {
+      passwordInput.addEventListener("input", function () { authPassword = passwordInput.value; });
+      passwordInput.addEventListener("keydown", function (e) { if (e.key === "Enter") submitAuthForm(); });
+    }
+    if (passwordConfirmInput) {
+      passwordConfirmInput.addEventListener("input", function () { authPasswordConfirm = passwordConfirmInput.value; });
+      passwordConfirmInput.addEventListener("keydown", function (e) { if (e.key === "Enter") submitAuthForm(); });
+    }
+    var submitBtn = authScreenEl.querySelector('[data-role="auth-submit"]');
+    if (submitBtn) submitBtn.addEventListener("click", submitAuthForm);
+    var toggleBtn = authScreenEl.querySelector('[data-role="auth-toggle"]');
+    if (toggleBtn) {
+      toggleBtn.addEventListener("click", function () {
+        authMode = authMode === "signup" ? "login" : "signup";
+        authError = "";
+        authInfo = "";
+        authPasswordConfirm = "";
+        renderAuthScreen();
+      });
+    }
+  }
+
+  function translateAuthError(msg) {
+    msg = msg || "";
+    if (/already registered|already exists/i.test(msg)) return "이미 사용 중인 아이디입니다.";
+    if (/invalid login credentials/i.test(msg)) return "아이디 또는 비밀번호가 올바르지 않습니다.";
+    if (/password should be at least|password.*length/i.test(msg)) return "비밀번호는 6자 이상이어야 합니다.";
+    if (/unable to validate email|invalid email/i.test(msg)) return "아이디는 영문/숫자/밑줄(_)/하이픈(-)만 사용해 2~20자로 입력해주세요.";
+    return "요청 처리 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.";
+  }
+
+  async function submitAuthForm() {
+    if (authLoading) return;
+    authError = "";
+    authInfo = "";
+    var username = (authUsername || "").trim(); // 아이디 앞뒤 공백 제거
+    var password = authPassword || "";
+    var isSignup = authMode === "signup";
+
+    if (!username || !password || (isSignup && !authPasswordConfirm)) {
+      authError = "아이디와 비밀번호를 모두 입력해주세요.";
+      renderAuthScreen();
+      return;
+    }
+    if (!AUTH_USERNAME_RE.test(username)) {
+      authError = "아이디는 영문/숫자/밑줄(_)/하이픈(-)만 사용해 2~20자로 입력해주세요.";
+      renderAuthScreen();
+      return;
+    }
+    if (password.length < 6) {
+      authError = "비밀번호는 6자 이상이어야 합니다.";
+      renderAuthScreen();
+      return;
+    }
+    if (isSignup && password !== authPasswordConfirm) {
+      authError = "비밀번호가 일치하지 않습니다.";
+      renderAuthScreen();
+      return;
+    }
+    if (!supabaseClient) {
+      authError = "서버 연결 설정이 안 되어 있습니다. (SUPABASE_KEY 확인)";
+      renderAuthScreen();
+      return;
+    }
+
+    authLoading = true;
+    renderAuthScreen();
+    var authEmail = usernameToAuthEmail(username);
+
+    try {
+      if (isSignup) {
+        var res = await supabaseClient.auth.signUp({ email: authEmail, password: password });
+        if (res.error) throw res.error;
+
+        // profiles 테이블에 (id, username)을 기록해 아이디를 한 번 더
+        // UNIQUE로 보호한다(비밀번호는 여기 저장하지 않음 — Supabase Auth만
+        // 비밀번호를 다룬다). "Confirm email"이 꺼져 있어야 signUp 직후
+        // 세션이 바로 생기고, 그래야 아래 insert가 RLS(auth.uid() = id)를
+        // 통과한다.
+        if (res.data && res.data.user) {
+          var profileRes = await supabaseClient.from("profiles").insert({ id: res.data.user.id, username: username });
+          if (profileRes.error) {
+            // username UNIQUE 위반(동시 가입 등 드문 경쟁 상황) 안전망
+            if (/duplicate key|unique constraint/i.test(profileRes.error.message || "")) {
+              authLoading = false;
+              authError = "이미 사용 중인 아이디입니다.";
+              renderAuthScreen();
+              return;
+            }
+          }
+        }
+
+        // 가입 직후 자동으로 앱에 들어가지 않고, 안내 메시지를 보여준 뒤
+        // "로그인" 화면으로 돌아간다 — signUp 성공 시 세션이 함께 생겼을 수
+        // 있으므로(Confirm email이 꺼져 있는 경우) 명시적으로 로그아웃한다.
+        // (handleAuthSession의 "로그아웃됨" 분기는 authMode/authInfo를 건드리지
+        // 않도록 만들어 두었으므로, 이 signOut()이 뒤늦게 발생시키는
+        // SIGNED_OUT 이벤트가 아래에서 지금 막 세팅할 완료 메시지를 지울
+        // 걱정은 없다.)
+        try { await supabaseClient.auth.signOut(); } catch (e) {}
+        authLoading = false;
+        authMode = "login";
+        authInfo = "회원가입이 완료되었습니다.";
+        authPassword = "";
+        authPasswordConfirm = "";
+        renderAuthScreen();
+      } else {
+        var res2 = await supabaseClient.auth.signInWithPassword({ email: authEmail, password: password });
+        if (res2.error) throw res2.error;
+        authLoading = false;
+        authPassword = "";
+        handleAuthSession(res2.data.session);
+      }
+    } catch (e) {
+      authLoading = false;
+      // 로그인 실패 사유는 구분해 알려주지 않고(보안상), 요청된 문구 그대로
+      // "아이디 또는 비밀번호가 올바르지 않습니다."로 통일한다.
+      authError = isSignup ? translateAuthError(e && e.message) : "아이디 또는 비밀번호가 올바르지 않습니다.";
+      renderAuthScreen();
+    }
+  }
+
+  function showAuthScreen() {
+    if (mainUIEl) mainUIEl.style.display = "none";
+    if (authScreenEl) authScreenEl.style.display = "flex";
+    renderAuthScreen();
+  }
+
+  function showMainUI(session) {
+    if (authScreenEl) authScreenEl.style.display = "none";
+    if (mainUIEl) mainUIEl.style.display = "";
+    if (userUsernameLabelEl) userUsernameLabelEl.textContent = authEmailToUsername((session && session.user && session.user.email) || "");
+  }
+
+  function handleAuthSession(session) {
+    if (session && session.user) {
+      showMainUI(session);
+      startAppForUser(session); // 계정이 바뀌었을 때만 내부에서 리셋 후 새로 로드
+    } else {
+      unsubscribeRealtime();
+      currentUserId = null;
+      resetAppStateToDefault(); // 로그아웃하면 화면에 남은 계정 데이터를 즉시 지움
+      renderBoth();
+      // 일부러 authMode/authError/authInfo는 여기서 건드리지 않는다. 이유:
+      // signUp() 직후 우리가 스스로 signOut()을 호출하는 흐름에서, 그 결과로
+      // (실제 Supabase에서도) onAuthStateChange가 SIGNED_OUT 이벤트를 조금
+      // 늦게 여러 번 보낼 수 있는데, 그때마다 여기서 메시지를 지워버리면
+      // 방금 띄운 "회원가입이 완료되었습니다." 안내가 사라져버린다. 비밀번호
+      // 입력값만 화면에 남지 않도록 지워준다.
+      authPassword = "";
+      authPasswordConfirm = "";
+      showAuthScreen();
+    }
+  }
+
+  if (logoutBtnEl) {
+    logoutBtnEl.addEventListener("click", async function () {
+      if (!supabaseClient) return;
+      logoutBtnEl.disabled = true;
+      try { await supabaseClient.auth.signOut(); } catch (e) {}
+      logoutBtnEl.disabled = false;
+    });
+  }
+
+  if (!supabaseClient) {
+    // SUPABASE_KEY가 비어있거나 CDN을 못 불러온 경우: 로그인 자체가 불가능하므로
+    // 안내 문구만 보여준다.
+    authError = "서버 연결 설정이 안 되어 있어 로그인할 수 없습니다. (SUPABASE_KEY 확인)";
+    showAuthScreen();
+  } else {
+    // 페이지가 처음 열릴 때 로그인 화면이나 앱 화면이 잠깐이라도 잘못
+    // 노출되지 않도록, 세션 확인이 끝나기 전까지는 "불러오는 중" 상태만
+    // 보여준다.
+    renderAuthLoading();
+
+    // 1) 우선 getSession()으로 지금 이 브라우저에 이미 유효한 Supabase 로그인
+    //    세션이 있는지 명시적으로 확인한다(새로고침/재방문 시 자동 로그인).
+    supabaseClient.auth.getSession().then(function (res) {
+      handleAuthSession(res && res.data && res.data.session);
+    });
+
+    // 2) 그 이후의 로그인/로그아웃/토큰 갱신 등 상태 변화는 전부 여기서 받는다.
+    //    handleAuthSession은 이미 로그인된 상태를 그대로 유지시키는
+    //    idempotent한 처리라, getSession()과 중복 호출돼도 문제 없다.
+    supabaseClient.auth.onAuthStateChange(function (event, session) {
+      handleAuthSession(session);
+    });
+  }
 })();
 </script>
 </body>
